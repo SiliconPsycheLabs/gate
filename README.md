@@ -169,6 +169,12 @@ and whenever they are listed again (MCP, OpenAI and Anthropic shapes). The first
 a call to a tool whose description or parameters no longer match the pin sets the fact `tool_definition_changed`.
 `Session.repin(...)` makes the new definition the pin.
 
+Other fields a rule can read: `tool_words` (the words of a tool's name, `deleteRepository` gives `delete`,
+`repository`), `invocations` (each program with its first one or two words, `npm publish`, `gh pr merge`), `http_path`
+(the path of an HTTP request), `code_calls` (the dotted calls in inline code, lower-cased) and `destructive_sql` (a
+destructive statement sent to a database from a client or from code). A tool that installs packages gets the same
+package fields as the install command.
+
 Shell commands are parsed and normalised: the commands run (through `sudo`, `env`, `xargs` and other wrappers), pipes,
 redirects, substitutions, `cd` changes, paths read, written and deleted, hosts and URLs, git push targets and force
 flags, package names, pinning and registries, the verb class of service tools (read, mutate, destroy).
@@ -242,7 +248,8 @@ rule, and how many of them were false blocks on tasks you mark as legitimate.
 - `Config.workspaces_root`: the directory that holds the workspaces of agents that share a machine.
 - `ls`, `find`, `du` and `tree` with no path read the current directory: `cd /root && ls` is a look at `/root`.
 - Code given inline to an interpreter (`python -c`, `node -e`, a here-document) is scanned for the plain forms of
-  network access, process start and a read of the whole environment. Code built at run time is out of reach of any
+  network access, process start, a read of the whole environment, files removed or written with a path written out,
+  text decoded and then executed, and statements sent to a database. Code built at run time is out of reach of any
   reading of text: keep the sandbox.
 - Provenance is string matching. A value the attacker gets the user to type is `user`.
 
