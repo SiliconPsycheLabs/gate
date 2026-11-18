@@ -1,0 +1,25 @@
+{
+  "name": "splabs",
+  "description": "Silicon Psyche Labs: a deterministic gate in front of every action your coding agent takes.",
+  "owner": {
+    "name": "Silicon Psyche Labs",
+    "url": "https://splabs.io"
+  },
+  "plugins": [
+    {
+      "name": "splabs-gate",
+      "source": "./claude-code-plugin",
+      "description": "Every tool call Claude Code makes checked against fixed rules before it runs: allowed, refused, or held for your approval. Logged and counted on your console.",
+      "category": "security",
+      "tags": [
+        "security",
+        "guardrails",
+        "permissions",
+        "audit"
+      ]
+    }
+  ],
+  "renames": {
+    "gate": "splabs-gate"
+  }
+}

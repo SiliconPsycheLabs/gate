@@ -1,0 +1,52 @@
+{
+  "name": "splabs-gate",
+  "displayName": "Gate by Silicon Psyche Labs",
+  "version": "0.1.45",
+  "description": "A deterministic gate in front of every tool call Claude Code makes. Fixed rules decide: the action runs, is refused with a reply the model reads, or waits for you as Claude Code's own approval prompt. Every decision, and every yes or no of yours, is logged on your console at splabs.io/gate.",
+  "author": {
+    "name": "Silicon Psyche Labs",
+    "url": "https://splabs.io"
+  },
+  "homepage": "https://splabs.io/products/gate/claude-code",
+  "repository": "https://github.com/SiliconPsycheLabs/gate",
+  "license": "Apache-2.0",
+  "keywords": [
+    "security",
+    "guardrails",
+    "policy",
+    "permissions",
+    "hooks",
+    "audit",
+    "agents"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://splabs.io/manual/gate-claude-code",
+  "supportUrl": "https://github.com/SiliconPsycheLabs/gate/issues",
+  "privacyPolicyUrl": "https://splabs.io/privacy",
+  "termsOfServiceUrl": "https://splabs.io/terms",
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Gate key",
+      "description": "A gate-only key from splabs.io, Settings, API Keys, + Gate-only key. It starts with psa_gate_ and works only on the gate.",
+      "sensitive": true,
+      "required": true
+    },
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "description": "shadow: the gate decides and records, nothing is blocked (start here). enforce: refused actions do not run, held ones ask you.",
+      "options": [
+        "shadow",
+        "enforce"
+      ],
+      "default": "shadow"
+    },
+    "egress_hosts": {
+      "type": "string",
+      "title": "Allowed hosts",
+      "description": "Hosts the agent may contact without asking, comma-separated (for example api.example.com,docs.example.com). Leave empty for none.",
+      "default": ""
+    }
+  }
+}

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "splabs-gate"
+version = "0.1.45"
+description = "A deterministic gate for the actions of AI agents: normalise every action, check it against Cedar rules, allow, deny or hold for a person."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Silicon Psyche Labs" }]
+dependencies = ["cedarpy>=4.8", "bashlex>=0.18"]
+keywords = ["agents", "llm", "security", "policy", "cedar", "tool-calling"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+gate = "gate.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gate"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
