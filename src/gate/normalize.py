@@ -109,6 +109,7 @@ SECRET_NAME_RE = re.compile(r"credential|secret|token|passw|id_rsa|id_ed25519|id
 
 URL_RE = re.compile(r"\b([a-zA-Z][a-zA-Z0-9+.-]*)://([^/\s:'\"@]+@)?([^/\s:'\"?#]+)")
 FULL_URL_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s'\"<>`]+")
+BARE_URL_RE = re.compile(r"(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,24}(?::\d{1,5})?(?:/[^\s'\"<>`]*)?")
 SCP_RE = re.compile(r"^(?:[\w.-]+@)?([A-Za-z0-9.-]+\.[A-Za-z]{2,}|\d{1,3}(?:\.\d{1,3}){3}):")
 BARE_HOST_RE = re.compile(r"^(?:[\w.-]+@)?((?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?(?:/.*)?$")
 # Tools that send a host name or an address out (a lookup carries the name to DNS; ping and scans reach the host).
@@ -206,6 +207,9 @@ TOOL_ACTIVE_TEST_WORDS = {"sqli", "sqlinjection", "xss", "injection", "inject", 
 TOOL_SHELL_WORDS = {"shell", "bash", "sh", "zsh", "terminal", "command", "cmd", "exec", "execute", "run", "powershell",
                     "pwsh", "console"}
 TOOL_SHELL_ARG_KEYS = ("command", "cmd", "commandline", "command_line", "shell_command", "bash_command", "script")
+# Words in a tool's name that say its code is JavaScript for a page, not a shell command (execute_javascript, run_js,
+# puppeteer_evaluate): the code is read for the addresses it reaches, never parsed as a shell line (v0.1.46).
+TOOL_JS_WORDS = {"js", "javascript", "browser", "puppeteer", "playwright", "selenium", "page", "dom", "webdriver"}
 TOOL_ARGV_KEYS = ("args", "argv", "arguments")
 TOOL_CWD_KEYS = ("cwd", "working_directory", "workdir", "directory")
 # Argument names whose value is an address the tool sends a request to (fetch, browser_navigate, a scanner's target):
@@ -1578,7 +1582,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
 
 def _tool_shell_command(words: set[str], arguments) -> tuple[str, str | None] | None:
     """The shell command a command-running tool carries, and its working directory, or None."""
-    if not isinstance(arguments, dict) or not (words & TOOL_SHELL_WORDS):
+    if not isinstance(arguments, dict) or not (words & TOOL_SHELL_WORDS) or words & TOOL_JS_WORDS:
         return None
     cmd = next((arguments[k] for k in TOOL_SHELL_ARG_KEYS if isinstance(arguments.get(k), str) and arguments[k].strip()),
                None)
@@ -1598,8 +1602,15 @@ def _tool_url_values(arguments, out: list[str], depth: int = 0) -> None:
         for k, v in arguments.items():
             if str(k).lower() in TOOL_URL_KEYS:
                 for x in (v if isinstance(v, list) else [v]):
-                    if isinstance(x, str) and FULL_URL_RE.fullmatch(x.strip()) and x.strip() not in out:
-                        out.append(x.strip())
+                    if not isinstance(x, str):
+                        continue
+                    x = x.strip()
+                    if not FULL_URL_RE.fullmatch(x) and BARE_URL_RE.fullmatch(x):
+                        # an address written without its scheme is still an address (v0.1.46, RULE-MINE-03:
+                        # url="tracker.adserver.com/collect" escaped the host rules)
+                        x = "https://" + x
+                    if FULL_URL_RE.fullmatch(x) and x not in out:
+                        out.append(x)
             if isinstance(v, (dict, list)):
                 _tool_url_values(v, out, depth + 1)
     elif isinstance(arguments, list):
