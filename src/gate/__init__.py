@@ -18,7 +18,7 @@ from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
            "packs_dir", "set_packs_dir", "PacksNotInstalled"]
-__version__ = "0.1.45"
+__version__ = "0.1.46"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
