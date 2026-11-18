@@ -132,6 +132,30 @@ INLINE_PROC_RE = re.compile(
 INLINE_ENV_RE = re.compile(
     r"\bos\.environ\b(?!\s*(?:\.get\(|\[|\.setdefault\(|\.pop\())|\bprocess\.env\b(?![.\[])|%ENV\b(?!\{)"
     r"|\bENV\.(?:to_h|each|inspect|to_a)\b|\bgetenv\(\s*\)")
+# Files removed or written by inline code, when the path is written out: they meet the same file rules as `rm` or `>`.
+_P = r"\s*(['\"])(?P<p>[^'\"\n]{1,512})\1"
+INLINE_DELETE_RES = [re.compile(r"\b(?:shutil\.rmtree|os\.remove|os\.unlink|os\.rmdir|os\.removedirs|send2trash)\(" + _P),
+                     re.compile(r"\bPath\(" + _P + r"\s*\)\.(?:unlink|rmdir)\("),
+                     re.compile(r"\bfs\.(?:rmSync|rm|unlinkSync|unlink|rmdirSync|rmdir)\(" + _P),
+                     re.compile(r"\bFileUtils\.(?:rm_rf|rm_r|rm|remove_dir|remove_entry)\(?" + _P),
+                     re.compile(r"\b(?:unlink|rmdir)\(" + _P)]
+INLINE_WRITE_RES = [re.compile(r"\bopen\(" + _P + r"\s*,\s*(['\"])[^'\"]*[wax+]"),
+                    re.compile(r"\bPath\(" + _P + r"\s*\)\.(?:write_text|write_bytes|touch|open\(\s*['\"][wax])"),
+                    re.compile(r"\bfs\.(?:writeFileSync|writeFile|appendFileSync|appendFile|copyFileSync)\(" + _P),
+                    re.compile(r"\bFile\.(?:write|open)\(" + _P + r"(?:\s*,\s*['\"][wa])?"),
+                    re.compile(r"\bfile_put_contents\(" + _P)]
+# Code that runs text it has just decoded: hidden execution, as `base64 -d | sh` is.
+INLINE_EXEC_RE = re.compile(r"(?<![\w.])(?:exec|eval)\s*\(|\bnew\s+Function\(|\bcompile\(")
+INLINE_DECODE_RE = re.compile(r"\bb64decode\b|\bdecodebytes\b|\bfromhex\b|\bcodecs\.decode\b|\bzlib\.decompress\b"
+                              r"|\bmarshal\.loads\b|\batob\(|['\"]base64['\"]|\bunpack\(\s*['\"]m|\bBase64\.decode")
+# Database clients from the shell, and the calls that send a statement to a database or wipe one from code.
+DB_CLIENTS = {"psql", "mysql", "mariadb", "sqlite3", "redis-cli", "mongo", "mongosh", "clickhouse-client", "clickhouse",
+              "cqlsh", "duckdb", "sqlcmd", "bq", "snowsql", "cockroach", "influx", "usql", "pgcli", "mycli", "litecli"}
+INLINE_DB_EXEC_CALLS = {"execute", "executescript", "executemany", "query", "sql", "exec_driver_sql", "run_sql",
+                        "raw", "command", "eval"}
+INLINE_DB_WIPE_CALLS = {"flushall", "flushdb", "drop_database", "dropdatabase", "drop_collection", "dropcollection"}
+# Dotted calls in inline code (stripe.Transfer.create(...)), lower-cased: rules can name the ones that matter.
+INLINE_CALL_RE = re.compile(r"(?<![\w.])([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)\s*\(")
 INLINE_HOST_RE = re.compile(r"['\"]((?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})['\"]")
 FILE_SUFFIXES = {"py", "js", "ts", "txt", "md", "json", "csv", "log", "cfg", "toml", "yaml", "yml", "html", "sh",
                  "ini", "xml", "lock", "rb", "pl", "php", "lua", "go", "rs", "sql", "tf", "conf", "out", "tmp"}
@@ -351,6 +375,11 @@ def default_record() -> dict:
         "tool_outbound": False,
         "tool_reads_secret": False,
         "tool_uploads_local_file": False,
+        "tool_words": [],
+        "invocations": [],
+        "http_path": "",
+        "code_calls": [],
+        "destructive_sql": False,
     }
 
 
@@ -427,8 +456,15 @@ class _Ctx:
 
     def apply_inline_code(self, code: str):
         found = scan_inline_code(code)
-        for p in found["model_saves"]:
+        for p in found["model_saves"] + found["writes"]:
             self._writes.append(self.resolve(p))
+        for p in found["deletes"]:
+            self._deletes.append(self.resolve(p))
+        if found["decode_exec"]:
+            self.rec["decode_then_execute"] = True
+        if found["destructive_sql"]:
+            self.rec["destructive_sql"] = True
+        self.rec["code_calls"] = sorted(set(self.rec["code_calls"]) | set(found["calls"]))
         if found["network"]:
             self.rec["network"] = True
             for h in found["hosts"]:
@@ -616,8 +652,37 @@ def scan_inline_code(code: str) -> dict:
             v = m.group(2)
             if _looks_like_path(v) and v not in saves:
                 saves.append(v)
+    deletes = [m.group("p") for rx in INLINE_DELETE_RES for m in rx.finditer(code)]
+    writes = [m.group("p") for rx in INLINE_WRITE_RES for m in rx.finditer(code)]
+    calls = sorted({m.group(1).lower() for m in INLINE_CALL_RE.finditer(code)})
+    last = {m.group(1).lower() for m in re.finditer(r"\.([A-Za-z_]\w*)\s*\(", code)}  # every method called
+    literals = [m.group(2) for m in re.finditer(r"(['\"])((?:(?!\1).){1,2000})\1", code)]
     return {"network": net, "hosts": hosts, "process": bool(INLINE_PROC_RE.search(code)),
-            "environment": bool(INLINE_ENV_RE.search(code)), "model_saves": saves}
+            "environment": bool(INLINE_ENV_RE.search(code)), "model_saves": saves,
+            "deletes": [d for d in deletes if _fixed_path(d)],
+            "writes": [w for w in writes if _fixed_path(w)],
+            "decode_exec": bool(INLINE_EXEC_RE.search(code) and INLINE_DECODE_RE.search(code)),
+            # a destructive statement counts when the code also sends statements to a database, not when it only
+            # names one (a test, a pattern list); a client's own wipe call counts on its own
+            "destructive_sql": bool(last & INLINE_DB_WIPE_CALLS) or (
+                bool(last & INLINE_DB_EXEC_CALLS) and any(_DESTRUCTIVE_DB_HARD_RE.search(v) for v in literals)),
+            "calls": calls}
+
+
+def _fixed_path(p: str) -> bool:
+    """A path written out in code, not one built from a variable ($D/x, {root}/x, %s/x) whose value is not known here."""
+    return not any(c in p for c in "$%{}") and (_looks_like_path(p) or p.startswith(("~", "/", ".")))
+
+
+def _merge_flags(rec: dict, other: dict) -> None:
+    """What another record found, added to this one: its true flags and its lists (parse_ok is never raised)."""
+    for k, v in other.items():
+        if k == "parse_ok":
+            continue
+        if v is True:
+            rec[k] = True
+        elif isinstance(v, list) and v:
+            rec[k] = sorted(set(rec.get(k, [])) | set(v))
 
 
 def _in_dir(path: str, roots) -> bool:
@@ -649,6 +714,21 @@ def _analyze_command(words: list[str], redirects: list[tuple[str, str]], ctx: _C
     cmd = os.path.basename(words[0])
     args = words[1:]
     ctx._commands.append(cmd)
+    # "<program> <first word>" and "<program> <first> <second>" (npm publish, gh pr merge), flags left out, lower-cased
+    _plain = []
+    for a in args:
+        if not a or a.startswith("-"):
+            continue
+        if len(a) > 64 or any(c.isspace() for c in a):
+            break  # code or free text, not a subcommand
+        _plain.append(a.lower())
+        if len(_plain) == 2:
+            break
+    if _plain:
+        inv = [f"{cmd.lower()} {_plain[0]}"] + ([f"{cmd.lower()} {_plain[0]} {_plain[1]}"] if len(_plain) > 1 else [])
+        r["invocations"] = sorted(set(r["invocations"]) | set(inv))
+    if cmd.lower() in DB_CLIENTS and any(_destructive_db(a) for a in args):
+        r["destructive_sql"] = True
     if cmd in PAYMENT_COMMANDS:
         plain = [a for a in args if not a.startswith("-")]
         if plain and plain[0].lower() in PAYMENT_COMMANDS[cmd]:
@@ -915,6 +995,8 @@ def _analyze_git(args: list[str], ctx: _Ctx):
                 r["writes_git_internals"] = True
     if sub == "branch" and any(a == "-D" or (a.startswith("-") and not a.startswith("--") and "D" in a) for a in opts):
         r["git_discard"] = True
+    if sub == "clean" and any(a == "--force" or (a.startswith("-") and not a.startswith("--") and "f" in a) for a in opts):
+        r["git_discard"] = True  # untracked files are gone for good, as with reset --hard
     if sub == "branch" and "--force" in opts and any(a in ("-d", "--delete") for a in opts):
         r["git_discard"] = True
     if sub == "stash" and opts[:1] in (["drop"], ["clear"]):
@@ -1335,6 +1417,16 @@ def normalize_shell(command: str, config: Config, cwd: str | None = None, _depth
             rec["urls"] = sorted(set(rec["urls"]) | set(sub._urls))
             rec["egress_violation"] = rec["egress_violation"] or any(not config.host_allowed(h) for h in sub._hosts)
             found = scan_inline_code(body)
+            if found["writes"] or found["deletes"]:
+                sub3 = _Ctx(config, str(ctx.cwd))
+                sub3._writes.extend(sub3.resolve(p) for p in found["writes"])
+                sub3._deletes.extend(sub3.resolve(p) for p in found["deletes"])
+                _merge_flags(rec, sub3.finish())
+            if found["decode_exec"]:
+                rec["decode_then_execute"] = True
+            if found["destructive_sql"]:
+                rec["destructive_sql"] = True
+            rec["code_calls"] = sorted(set(rec["code_calls"]) | set(found["calls"]))
             if found["model_saves"]:
                 sub2 = _Ctx(config, str(ctx.cwd))
                 sub2._writes.extend(sub2.resolve(p) for p in found["model_saves"])
@@ -1437,7 +1529,12 @@ def normalize_http(method: str, url: str, config: Config, body: str | None = Non
     ctx.rec["network"] = True
     ctx.rec["http_method"] = (method or "GET").upper()
     ctx.add_url(url)
-    return ctx.finish()
+    rec = ctx.finish()
+    try:
+        rec["http_path"] = (urlsplit(url).path or "/").lower()
+    except ValueError:
+        rec["http_path"] = ""
+    return rec
 
 
 def _matches_any(p: str, patterns: list[str]) -> bool:
@@ -1520,6 +1617,38 @@ def _tool_arg_values(arguments, out: list[str], depth: int = 0) -> None:
                 out.append(x)
 
 
+_TOOL_PACKAGE_KEYS = ("name", "package", "packages", "pkg", "module", "modules", "dependency", "dependencies", "library")
+
+
+def _tool_package_install(rec: dict, arguments: dict, config: Config) -> None:
+    """A tool that installs packages: the same record as the package manager's install command, so the package rules
+    (pinning, registries, names the user did not give) read it."""
+    names: list[str] = []
+    for k in _TOOL_PACKAGE_KEYS:
+        v = arguments.get(k)
+        for x in (v if isinstance(v, list) else [v]):
+            if isinstance(x, str) and x.strip() and len(x) <= 200 and not any(c.isspace() for c in x.strip()):
+                names.append(x.strip())
+    if not names:
+        return
+    version = arguments.get("version")
+    version = str(version).strip() if isinstance(version, (str, int, float)) and str(version).strip() else ""
+    mgr = str(arguments.get("manager") or arguments.get("package_manager") or arguments.get("ecosystem") or "").lower()
+    if mgr in PACKAGE_MANAGERS and mgr not in ("python", "python3", "npx"):
+        sep = "==" if mgr in ("pip", "pip3", "uv") else "@" if mgr in ("npm", "yarn", "pnpm", "bun") else ""
+        cmd = f"{mgr} install " + " ".join(shlex.quote(n + (sep + version if version and sep else "")) for n in names)
+        sub = normalize_shell(cmd, config)
+        for k in ("package_install", "package_manager", "packages", "package_unpinned", "package_registry_violation",
+                  "network", "hosts"):
+            if sub.get(k):
+                rec[k] = sorted(set(rec.get(k, [])) | set(sub[k])) if isinstance(sub[k], list) else sub[k]
+    else:
+        rec["package_install"] = True
+        rec["package_manager"] = mgr
+        rec["packages"] = sorted(set(names))
+        rec["package_unpinned"] = not version and not any(("==" in n or "@" in n[1:]) for n in names)
+
+
 def normalize_tool(name: str, arguments, config: Config) -> dict:
     """A call to a tool that is not a shell, a file or an HTTP request (an MCP server's tool, a built-in of the
     agent harness). The record names the tool, its server, whether its name only reads, and the values of the
@@ -1536,6 +1665,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     rec["tool_name"] = name
     rec["tool_server"] = server
     rec["tool_verb_class"] = _tool_verb_class(tool)
+    rec["tool_words"] = sorted({w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", tool) if w})
     targets: list[str] = []
     _tool_targets(arguments if arguments is not None else {}, targets)
     rec["tool_targets"] = sorted(targets)
@@ -1558,6 +1688,8 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     if rec["tool_verb_class"] == "write":
         rec["tool_checks_off"] = sorted(set(_checks_off(arguments)) | set(_checks_off_by_name(tool)))
     rec["tool_physical_access"] = _physical_access(tool)
+    if rec["tool_verb_class"] == "write" and "install" in rec["tool_words"] and isinstance(arguments, dict):
+        _tool_package_install(rec, arguments, config)
     if config.declared_tools:
         rec["tool_undeclared"] = not any(fnmatch.fnmatch(n, p) for p in config.declared_tools for n in (name, tool))
     # a push through a git tool (git_push, mcp__github__push_files): the same push rules as `git push` in a shell
@@ -1812,7 +1944,12 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
 # and DROP are always destructive; DELETE and UPDATE are destructive only without a WHERE clause (a mass write).
 _DESTRUCTIVE_DB_RE = re.compile(
     r"\b(?:TRUNCATE\s+TABLE|TRUNCATE|DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|COLLECTION)|"
-    r"DELETE\s+FROM|UPDATE(?=\s+[\w.\"`\[\]]+\s+SET\b))\b", re.IGNORECASE)
+    r"DELETE\s+FROM|UPDATE(?=\s+[\w.\"`\[\]]+\s+SET\b)|FLUSHALL|FLUSHDB)\b"
+    r"|\.dropDatabase\(\s*\)|\.drop\(\s*\)|\.deleteMany\(\s*\{\s*\}\s*\)", re.IGNORECASE)
+# In code a DELETE or UPDATE often has its WHERE in another string or a parameter, so only the statements that are
+# destructive whatever follows them count there.
+_DESTRUCTIVE_DB_HARD_RE = re.compile(
+    r"\b(?:TRUNCATE|DROP\s+(?:TABLE|DATABASE|SCHEMA|COLLECTION)|FLUSHALL|FLUSHDB)\b|\.dropDatabase\(\s*\)", re.IGNORECASE)
 _HAS_WHERE_RE = re.compile(r"\bWHERE\b", re.IGNORECASE)
 
 
@@ -1886,6 +2023,8 @@ _SECRET_SHAPE_RE = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----|"
     r"[a-z][a-z0-9+.-]*://[^\s:/@]+:(?P<pw>[^\s@/]{3,})@|"
     r"(?i:(?:^|[;\s])(?:password|pwd)\s*=\s*)(?P<kv>[^;\s'\"]{3,})|"
+    # NAME_PASSWORD=..., API_TOKEN: ..., in free text (a message body that carries a credential)
+    r"(?i:(?:^|[;\s,])[A-Za-z0-9]+_(?:password|passwd|pwd|secret|token|api_?key|access_?key)\s*[=:]\s*)(?P<kv2>[^;\s,'\"$<{]{6,})|"
     r"https://hooks\.slack\.com/services/\S+")
 _SECRET_KEY_RE = re.compile(
     r"(?:^|_)(?:password|passwd|pwd|secret|token|api_?key|apikey|access_?key|private_?key|client_?secret|"
@@ -1945,7 +2084,7 @@ def _secret_values(arguments) -> list[str]:
             m = _SECRET_SHAPE_RE.search(x)
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
-                out.add(m.group("pw") or m.group("kv") or m.group(0))
+                out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group(0))
             elif _SECRET_KEY_RE.search(key.replace("-", "_")) and len(x) >= 3 and not x.lower().startswith(("bearer $", "token $")):
                 out.add(x if len(x) <= 200 else x[:200])
 
