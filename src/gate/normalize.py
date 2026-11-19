@@ -2733,7 +2733,7 @@ def normalize(action: dict, config: Config) -> dict:
     return rec
 
 
-# A search of the whole disk: `find /` (also `find / -name x`), or a recursive grep whose search root is `/` (v0.1.66).
+# A search of the whole disk: `find /` (also `find / -name x`), or a recursive grep whose search root is `/` (v0.1.64).
 _ROOT_SWEEP = re.compile(r"\bfind\s+(?:-[HLP]\s+)*/(?=\s|$|;|\))|\bgrep\s+(?:-\S*\s+)*-\S*[rR]\S*\s+(?:\S+\s+)*?/(?=\s|$|;|\))")
 
 
@@ -2751,7 +2751,7 @@ def _action_text(action: dict) -> str:
 
 
 def _off_limits(action: dict, rec: dict, config: Config) -> None:
-    """reads_off_limits and sweeps_root (v0.1.66, PSA #7812 GATE-DBENCH-02): the owner's off-limits paths and services
+    """reads_off_limits and sweeps_root (v0.1.64, PSA #7812 GATE-DBENCH-02): the owner's off-limits paths and services
     (Config.off_limits) touched by the action's paths, URLs and hosts, or written as a whole token in its text; and a
     search of the whole disk. String match on the action object only."""
     text = _action_text(action)
