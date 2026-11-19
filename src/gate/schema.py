@@ -36,6 +36,7 @@ def context_shape() -> dict:
         "denials_in_session": {"type": "Long"},
         "holds_in_session": {"type": "Long"},
         "outside_contract": strset,
+        "contract_operations": strset,
     }
     config = {
         "workspace": {"type": "String"}, "egress_hosts": strset, "egress_listed": {"type": "Boolean"}, "environment": {"type": "String"},

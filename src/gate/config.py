@@ -139,3 +139,4 @@ class Config:
         yield self.workspace_path
         for p in self.extra_writable:
             yield Path(p).expanduser().resolve()
+

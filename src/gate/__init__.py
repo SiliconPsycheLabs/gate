@@ -21,12 +21,12 @@ from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
            "packs_dir", "set_packs_dir", "PacksNotInstalled", "set_packs_pubkey", "BundleError"]
-__version__ = "0.1.68"
+__version__ = "0.1.67"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
 PACKS_DIR = Path(__file__).parent / "packs"
-PACKS = ("coding", "ops", "strict", "harness", "industrial", "building", "finance", "gui")
+PACKS = ("coding", "ops", "strict", "harness", "industrial", "building", "finance", "gui", "scope")
 _packs_dir: Path | None = None
 
 
@@ -119,6 +119,7 @@ class Gate:
         record = normalize(action, self.config)
         facts = session.facts(record)
         facts["outside_contract"] = contract_outside(record, self._contract, session.contract_widened)
+        facts["contract_operations"] = sorted((self._contract or {}).get("operations", []))
         context = {"n": record, "facts": facts, "config": self.config.to_context()}
         decision = self.policies.evaluate(action_type, agent, context, agent_attrs)
         if decision.outcome == ALLOW and (record["reads_secret"] or record["tool_reads_secret"]):
