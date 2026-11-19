@@ -58,6 +58,9 @@ class Config:
         one session may make without a person. Default none: every machine write is undeclared.
     money_limit: the amount (whole units of the account's currency) up to which a posting, an order or a pay change
         does not need a person in the finance pack. Default 0: every one does.
+    contract: the task contract of this session (gate/contract.py): the tools, hosts, targets and paths the work may
+        touch, declared before the agent reads any data. What an action touches outside it is the fact
+        outside_contract. Default none: no contract.
     """
 
     workspace: str = "."
@@ -75,6 +78,7 @@ class Config:
     declared_tools: list[str] = field(default_factory=list)
     assets: list[dict] = field(default_factory=list)
     money_limit: int = 0
+    contract: dict | None = None
 
     @property
     def workspace_path(self) -> Path:
@@ -116,6 +120,7 @@ class Config:
             "default_branches": list(self.default_branches),
             "assets_registered": bool(self.assets),
             "money_limit": int(self.money_limit or 0),
+            "contract_declared": bool(self.contract),
         }
 
     @classmethod

@@ -41,6 +41,9 @@ class Session:
     # asset received (allowed or approved): segregation of duties and write caps (v0.1.56, PSA #7802)
     bank_changed: bool = False
     asset_writes: dict[str, int] = field(default_factory=dict)
+    # values a person approved outside the task contract ("host:x", "target:y"): the contract is widened by them for
+    # the rest of the session (gate/contract.py)
+    contract_widened: set = field(default_factory=set)
     denials: int = 0
     holds: int = 0
     # Provenance computed incrementally (v0.1.56, PSA #7789): for each value already looked up, how far each list of
@@ -77,6 +80,10 @@ class Session:
         """A person approved a call to a tool whose definition changed: its current definition becomes the pin."""
         if name in self.tool_defs:
             self.tool_pins[name] = self.tool_defs[name]
+
+    def widen(self, items) -> None:
+        """A person approved an action outside the task contract: what it touched is in the contract from now on."""
+        self.contract_widened.update(str(i) for i in items or [])
 
     def note_done(self, record: dict) -> None:
         """An action was allowed or approved: remember what the domain facts need."""

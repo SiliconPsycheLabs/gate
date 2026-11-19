@@ -96,6 +96,54 @@ def cmd_packs(args) -> int:
     return 0
 
 
+def cmd_mcp_proxy(args) -> int:
+    from .integrations import mcp_proxy
+    if args.command and args.command[0] == "--":
+        args.command = args.command[1:]
+    if not args.command:
+        print("gate mcp-proxy: give the server command after --", file=sys.stderr)
+        return 2
+    return mcp_proxy.main(args)
+
+
+def cmd_log_verify(args) -> int:
+    from .ledger import verify
+    key = os.environ.get("GATE_LOG_HMAC_KEY", "")
+    res = verify(args.log, key.encode() if key else None)
+    print(json.dumps(res, indent=2))
+    return 0 if res["ok"] else 1
+
+
+def cmd_bundle_keygen(args) -> int:
+    from .bundle import keypair
+    priv, pub = keypair()
+    print(json.dumps({"private": priv, "public": pub}, indent=2))
+    return 0
+
+
+def cmd_bundle_make(args) -> int:
+    from . import __version__
+    from .bundle import make
+    m = make(args.directory, args.packs_version, args.engine_min or __version__,
+             os.environ.get("GATE_PACKS_PRIVKEY", "").strip() or None)
+    print(json.dumps(m, indent=2))
+    return 0
+
+
+def cmd_bundle_verify(args) -> int:
+    from . import __version__
+    from .bundle import BundleError, check, configured_pubkey
+    try:
+        m = check(args.directory, configured_pubkey(), __version__)
+    except BundleError as e:
+        print(f"refused: {e}")
+        return 1
+    print("no manifest (unsigned directory)" if m is None else
+          f"ok: packs {m.get('packs_version')}, {len(m.get('files', {}))} files"
+          + (", signature checked" if configured_pubkey() else ", signature not checked (no GATE_PACKS_PUBKEY)"))
+    return 0
+
+
 def _cc():
     from .integrations import claude_code
     return claude_code
@@ -153,6 +201,37 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("packs", help="list the packs and whether they are installed")
     p.set_defaults(fn=cmd_packs)
+
+    p = sub.add_parser("mcp-proxy", help="stdio MCP proxy: forward tools/call to the server only after the gate allows it")
+    p.add_argument("--server-name", required=True, help="the server's name in tool names (mcp__<name>__<tool>)")
+    p.add_argument("--pack", help="comma-separated packs: " + ", ".join(PACKS))
+    p.add_argument("--policies", nargs="*", help="extra .cedar files or directories")
+    p.add_argument("--config", help="owner configuration JSON (a task contract goes in its 'contract' field)")
+    p.add_argument("--task", default="", help="the task the agent was given: the session's user message")
+    p.add_argument("--task-file", default="", help="read the task from a file")
+    p.add_argument("--log", default="", help="hash-chained decision log (JSON lines)")
+    p.add_argument("--agent", default="agent")
+    p.add_argument("command", nargs=argparse.REMAINDER, help="-- then the MCP server command")
+    p.set_defaults(fn=cmd_mcp_proxy)
+
+    p = sub.add_parser("log", help="the hash-chained decision log")
+    lg = p.add_subparsers(dest="log_cmd", required=True)
+    q = lg.add_parser("verify", help="check that no line was changed, removed or moved; exit 0 if intact, 1 if not")
+    q.add_argument("log")
+    q.set_defaults(fn=cmd_log_verify)
+
+    p = sub.add_parser("bundle", help="signed rule-pack bundles")
+    bd = p.add_subparsers(dest="bundle_cmd", required=True)
+    q = bd.add_parser("keygen", help="print a new Ed25519 key pair (base64): keep the private one secret")
+    q.set_defaults(fn=cmd_bundle_keygen)
+    q = bd.add_parser("make", help="write manifest.json (and manifest.sig with GATE_PACKS_PRIVKEY) for a packs directory")
+    q.add_argument("directory")
+    q.add_argument("--packs-version", required=True)
+    q.add_argument("--engine-min", default=None, help="default: this engine's version")
+    q.set_defaults(fn=cmd_bundle_make)
+    q = bd.add_parser("verify", help="check a packs directory against its manifest and, with GATE_PACKS_PUBKEY, its signature")
+    q.add_argument("directory")
+    q.set_defaults(fn=cmd_bundle_verify)
 
     args = ap.parse_args(argv)
     return args.fn(args)

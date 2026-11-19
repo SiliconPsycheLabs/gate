@@ -35,11 +35,12 @@ def context_shape() -> dict:
         "asset_writes_in_session": {"type": "Long"},
         "denials_in_session": {"type": "Long"},
         "holds_in_session": {"type": "Long"},
+        "outside_contract": strset,
     }
     config = {
         "workspace": {"type": "String"}, "egress_hosts": strset, "egress_listed": {"type": "Boolean"}, "environment": {"type": "String"},
         "change_window": {"type": "Boolean"}, "default_branches": strset,
-        "assets_registered": {"type": "Boolean"}, "money_limit": {"type": "Long"},
+        "assets_registered": {"type": "Boolean"}, "money_limit": {"type": "Long"}, "contract_declared": {"type": "Boolean"},
     }
     return {"type": "Record", "attributes": {
         "n": {"type": "Record", "attributes": n},

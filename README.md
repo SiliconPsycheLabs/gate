@@ -274,8 +274,41 @@ words in the session, about 4 ms.
 ## Log
 
 With `log_path`, every decision is appended as one JSON line (action, normalised record, facts, outcome, rule ids),
-flushed to disk at once. Use it to write new rules (`gate replay`) and to count: denials and holds per 100 tasks, per
-rule, and how many of them were false blocks on tasks you mark as legitimate.
+flushed to disk at once, as a **hash chain**: each line carries the hash of the line before it and its own, so a line
+changed, removed or moved afterwards is found by `gate log verify gate.jsonl` (exit 1, with the first bad line). With
+`GATE_LOG_HMAC_KEY` set, each line also carries an HMAC of its hash, so a log rewritten from scratch without the key is
+told apart. Use the log to write new rules (`gate replay`) and to count: denials and holds per 100 tasks, per rule, and
+how many of them were false blocks on tasks you mark as legitimate.
+
+## Task contract
+
+`Config(contract={...})` declares what one session's work may touch, before the agent reads any data: `tools` (name
+patterns), `hosts` (`*.` matches subdomains), `targets` (recipients, accounts, ids a tool sends to or acts on), `paths`
+(directories or patterns the work may write or delete under). What an action touches outside it is the fact
+`outside_contract` (`["host:evil.example", "target:drop@x.io"]`), for a rule to hold or refuse. `Gate.approve` on a held
+action widens the contract by what it touched, for the rest of the session. A dimension left out constrains nothing; an
+unknown dimension is refused. The orchestrator that starts the agent, or the owner, writes the contract from the task.
+
+## MCP enforcement point
+
+```bash
+gate mcp-proxy --server-name crm --pack coding --config owner.json --task "update Anna's phone" --log gate.jsonl \
+    -- python crm_server.py
+```
+
+The agent's MCP client starts this instead of the server (stdio). A `tools/call` reaches the server only when the gate
+allows it; a refused or held call gets an MCP tool error with the gate's fixed reply; a call the gate cannot check is
+refused. `tools/list` results are reported to the session (a tool that changes its definition is seen), tool results
+are reported as tool outputs (values taken from them carry that provenance), and `--task` is the session's user message.
+Held calls are not run, since stdio has no person to ask: list approved values in the task contract.
+
+## Signed rule packs
+
+A packs directory can carry `manifest.json` (packs version, the engine version it needs, the SHA-256 of every pack) and
+`manifest.sig` (Ed25519). With a manifest, every pack must match it and no unlisted pack may be present; with
+`GATE_PACKS_PUBKEY` (base64 of the raw public key) set, a directory without a valid signature is refused. `gate bundle
+keygen`, `gate bundle make <dir> --packs-version V` (signs with `GATE_PACKS_PRIVKEY`), `gate bundle verify <dir>`.
+Signing and checking signatures need `pip install "splabs-gate[signing]"`.
 
 ## Limits
 
