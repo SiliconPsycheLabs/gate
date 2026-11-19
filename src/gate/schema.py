@@ -31,12 +31,15 @@ def context_shape() -> dict:
         "secret_read_in_session": {"type": "Boolean"},
         "tool_definition_changed": {"type": "Boolean"},
         "git_remote_not_from_user": {"type": "Boolean"},
+        "bank_changed_in_session": {"type": "Boolean"},
+        "asset_writes_in_session": {"type": "Long"},
         "denials_in_session": {"type": "Long"},
         "holds_in_session": {"type": "Long"},
     }
     config = {
         "workspace": {"type": "String"}, "egress_hosts": strset, "egress_listed": {"type": "Boolean"}, "environment": {"type": "String"},
         "change_window": {"type": "Boolean"}, "default_branches": strset,
+        "assets_registered": {"type": "Boolean"}, "money_limit": {"type": "Long"},
     }
     return {"type": "Record", "attributes": {
         "n": {"type": "Record", "attributes": n},

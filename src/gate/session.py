@@ -37,6 +37,10 @@ class Session:
     tool_pins: dict[str, str] = field(default_factory=dict)
     tool_defs: dict[str, str] = field(default_factory=dict)
     secret_read: bool = False
+    # a payee's bank details were changed in this session (allowed or approved), and how many machine writes each
+    # asset received (allowed or approved): segregation of duties and write caps (v0.1.56, PSA #7802)
+    bank_changed: bool = False
+    asset_writes: dict[str, int] = field(default_factory=dict)
     denials: int = 0
     holds: int = 0
 
@@ -68,6 +72,15 @@ class Session:
         """A person approved a call to a tool whose definition changed: its current definition becomes the pin."""
         if name in self.tool_defs:
             self.tool_pins[name] = self.tool_defs[name]
+
+    def note_done(self, record: dict) -> None:
+        """An action was allowed or approved: remember what the domain facts need."""
+        effects = set(record.get("effects", []))
+        if "bank_details" in effects:
+            self.bank_changed = True
+        if effects & {"setpoint", "actuate", "motion", "mode", "program", "safety", "physical_access"}:
+            for a in record.get("assets", []):
+                self.asset_writes[a] = self.asset_writes.get(a, 0) + 1
 
     def observe_user(self, text: str) -> None:
         self.user_messages.append(text)
@@ -118,6 +131,7 @@ class Session:
         values |= set(record.get("tool_arg_values", []))
         values |= set(record.get("tool_secret_values", [])) | set(record.get("tool_bulk_values", []))
         values |= set(record.get("tool_admin_urls", []))
+        values |= set(record.get("bank_values", []))
         packages = set(record["packages"])
         prov = {v: self.provenance(v, package=v in packages) for v in sorted(values)}
         for v in record.get("tool_admin_urls", []):
@@ -135,6 +149,8 @@ class Session:
             "from_model": sorted(k for k, s in prov.items() if s == "model"),
             "git_remote_not_from_user": any(self.provenance(u) != "user" for u in record.get("git_remote_urls", [])),
             "secret_read_in_session": self.secret_read,
+            "bank_changed_in_session": self.bank_changed,
+            "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
             "denials_in_session": self.denials,
             "holds_in_session": self.holds,

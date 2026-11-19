@@ -49,6 +49,15 @@ class Config:
         "mcp__crm__*"). When set, a call to any other tool is marked in the record: a tool that appeared in the
         agent's tool list without the owner putting it there (a poisoned MCP server, a planted plugin) does not run on
         its own. Default none: every tool may be called.
+    assets: the owner's register of machines and machine-side targets (PSA #7802). Each entry is a dict:
+        {"match": "<pattern or list of patterns on asset ids>", "class": "production" | "safety" | "lab" | ...,
+         "min": <int>, "max": <int>, "max_writes": <int>}. Asset ids are "<domain>:<target>" as the record names them
+        (modbus:10.0.4.21/40001, opcua:ns=2;s=Line1.Oven.Setpoint, home:lock.front_door, mqtt:plant/+/cmd,
+        ros:/cmd_vel, gcode:haas-vf2). A write to an asset that matches no entry is marked undeclared; a value
+        outside [min, max] of a matching entry is marked outside its envelope; max_writes caps how many writes to it
+        one session may make without a person. Default none: every machine write is undeclared.
+    money_limit: the amount (whole units of the account's currency) up to which a posting, an order or a pay change
+        does not need a person in the finance pack. Default 0: every one does.
     """
 
     workspace: str = "."
@@ -64,6 +73,8 @@ class Config:
     model_paths: list[str] = field(default_factory=lambda: list(DEFAULT_MODEL_PATHS))
     trusted_tools: list[str] = field(default_factory=list)
     declared_tools: list[str] = field(default_factory=list)
+    assets: list[dict] = field(default_factory=list)
+    money_limit: int = 0
 
     @property
     def workspace_path(self) -> Path:
@@ -103,6 +114,8 @@ class Config:
             "environment": self.environment,
             "change_window": bool(self.change_window),
             "default_branches": list(self.default_branches),
+            "assets_registered": bool(self.assets),
+            "money_limit": int(self.money_limit or 0),
         }
 
     @classmethod
