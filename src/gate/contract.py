@@ -9,14 +9,23 @@ that value, for the rest of the session. No contract, or a dimension left out of
     {"tools": ["mcp__crm__*", "Read"],            # tool names, shell-style patterns
      "hosts": ["api.example.com", "*.corp.example"],   # hosts the work may reach; "*." matches subdomains
      "targets": ["anna@example.com", "acct_42"],   # recipients, accounts, ids a tool may send to or act on
-     "paths": ["/srv/app", "/data/exports/*"]}     # directories or patterns the work may write or delete under
+     "paths": ["/srv/app", "/data/exports/*"],     # directories or patterns the work may write or delete under
+     "operations": ["git-history-rewrite"]}        # operations the task asks for (closed list, OPERATIONS)
+
+Since v0.1.67 (PSA #7812, GATE-DBENCH-04) the contract can also name operations the task asks for, from a closed list;
+they reach the rules as the fact contract_operations, and the maintained packs do not hold them. Its plain directories
+count as inside the task for reads_outside_scope (pack scope). The contract grants nothing else: its paths and hosts
+still only constrain (measured: letting them open writes, egress and off-limits paths freed as many bad calls as
+legitimate ones).
 """
 
 from __future__ import annotations
 
 import fnmatch
 
-DIMENSIONS = ("tools", "hosts", "targets", "paths")
+DIMENSIONS = ("tools", "hosts", "targets", "paths", "operations")
+# what a task may ask for that a rule would otherwise hold (v0.1.67): rewriting or discarding git history
+OPERATIONS = ("git-history-rewrite", "git-discard")
 
 
 def clean(contract) -> dict | None:
@@ -33,7 +42,19 @@ def clean(contract) -> dict | None:
         if not isinstance(v, list) or not all(isinstance(x, str) and x.strip() for x in v):
             raise ValueError(f"contract.{k} must be a list of non-empty strings")
         out[k] = [x.strip() for x in v]
+        if k == "operations":
+            bad = [x for x in out[k] if x not in OPERATIONS]
+            if bad:
+                raise ValueError(f"unknown contract operation {bad[0]!r}; allowed: {', '.join(OPERATIONS)}")
     return out
+
+
+def plain_dirs(contract: dict | None) -> list[str]:
+    """The contract's paths that are plain absolute directories (no pattern): writable, and exempt from off_limits."""
+    if not contract:
+        return []
+    return [p.rstrip("/") or "/" for p in contract.get("paths", []) or []
+            if p.startswith("/") and not any(c in p for c in "*?[")]
 
 
 def _host_in(host: str, patterns: list[str]) -> bool:
