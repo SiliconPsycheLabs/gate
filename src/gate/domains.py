@@ -101,6 +101,27 @@ def _nums(v) -> list[int]:
     return [] if n is None else [n]
 
 
+
+def _srv(srv: str, names) -> bool:
+    """Whether a server name names one of these systems, by whole words: "ros" is the token ros or ros2-style
+    compound, never the letters inside "microsoft"; "ot" never matches "remote" (v0.1.58: v0.1.56 matched substrings,
+    so claude-code-remote read as an OT server). Names of 6 letters or more also match as the start or the end of a
+    token (homeassistant in homeassistantmcp, charger in evcharger)."""
+    toks = [t for t in re.split(r"[_\-.\s:/]+", (srv or "").lower()) if t]
+    joined = "".join(toks)
+    for n in names:
+        nt = [t for t in re.split(r"[_\-.\s]+", n.lower()) if t]
+        if not nt:
+            continue
+        if len(nt) > 1:
+            if any(toks[i:i + len(nt)] == nt for i in range(len(toks))) or joined.startswith("".join(nt)):
+                return True
+        elif nt[0] in toks:
+            return True
+        elif len(nt[0]) >= 6 and any(t.startswith(nt[0]) or t.endswith(nt[0]) for t in toks):
+            return True
+    return False
+
 class _Out:
     def __init__(self):
         self.effects: set[str] = set()
@@ -598,7 +619,7 @@ _ACCOUNTING_SERVERS = ("quickbooks", "qbo", "xero", "sage", "netsuite", "freshbo
                        "aruba", "fatturazione", "ledger", "accounting", "erp", "invoice", "billing", "pennylane",
                        "billy", "dinero", "e-conomic", "economic", "visma", "fortnox", "intuit", "brex", "ramp",
                        "expensify", "bill", "billcom", "tipalti", "coupa", "ariba")
-_PAYROLL_SERVERS = ("workday", "gusto", "adp", "bamboohr", "rippling", "deel", "remote", "paychex", "personio",
+_PAYROLL_SERVERS = ("workday", "gusto", "adp", "bamboohr", "rippling", "deel", "remote_com", "paychex", "personio",
                     "hibob", "zenefits", "paylocity", "successfactors", "oracle_hcm", "hcm", "payroll", "hr", "zucchetti")
 _SIGN_SERVERS = ("docusign", "adobesign", "adobe_sign", "dropboxsign", "hellosign", "yousign", "pandadoc", "signnow",
                  "esign", "signwell", "namirial", "infocert", "zoho_sign", "zohosign")
@@ -615,10 +636,10 @@ def _business(server: str, tw: list[str], args, o: _Out):
         return
     words = set(tw)
     srv = server.lower()
-    dom = ("sap" if "sap" in srv else "payroll" if any(s in srv for s in _PAYROLL_SERVERS) else
-           "signature" if any(s in srv for s in _SIGN_SERVERS) else
-           "commerce" if any(s in srv for s in _COMMERCE_SERVERS) else
-           "accounting" if any(s in srv for s in _ACCOUNTING_SERVERS) or _TAX_RE.match(srv) else "")
+    dom = ("sap" if _srv(srv, ("sap",)) else "payroll" if _srv(srv, _PAYROLL_SERVERS) else
+           "signature" if _srv(srv, _SIGN_SERVERS) else
+           "commerce" if _srv(srv, _COMMERCE_SERVERS) else
+           "accounting" if _srv(srv, _ACCOUNTING_SERVERS) or _TAX_RE.match(srv) else "")
     bank = _bank_values(args)
     money_words = {"pay", "payment", "payout", "transfer", "wire", "remit", "withdraw", "refund", "charge"}
     if bank and not words & money_words and not ({"payroll"} & words):
@@ -759,55 +780,55 @@ def _tool(name: str, arguments, o: _Out):
     tw = _words(tool)
     words = set(tw)
     args = arguments if isinstance(arguments, (dict, list)) else {}
-    if "modbus" in srv or "modbus" in words:
+    if _srv(srv, ("modbus",)) or "modbus" in words:
         _modbus(tw, args, o)
-    elif any(s in srv for s in ("opcua", "opc_ua", "opc-ua", "opc")) or {"opc", "ua"} <= words or "opcua" in words:
+    elif _srv(srv, ("opcua", "opc_ua", "opc-ua", "opc")) or {"opc", "ua"} <= words or "opcua" in words:
         _opcua(tw, args, o)
-    elif any(s in srv for s in ("s7", "snap7", "siemens", "tia", "simatic")):
+    elif _srv(srv, ("s7", "snap7", "siemens", "tia", "simatic")):
         _plc(srv, tw, args, o, "s7")
-    elif any(s in srv for s in ("plc", "logix", "rockwell", "ethernetip", "enip", "cip", "codesys", "beckhoff", "twincat",
+    elif _srv(srv, ("plc", "logix", "rockwell", "ethernetip", "enip", "cip", "codesys", "beckhoff", "twincat",
                                 "ads", "omron", "fins", "melsec", "mitsubishi", "schneider", "modicon", "allenbradley",
                                 "pycomm", "scada", "hmi", "ignition", "kepware", "wonderware", "dnp3", "iec104",
-                                "iec61850", "profinet", "ot")) and not any(s in srv for s in ("ota",)):
-        if any(s in srv for s in ("scada", "dnp3", "iec104", "iec61850")) and words & {"breaker", "trip", "recloser",
+                                "iec61850", "profinet", "ot")):
+        if _srv(srv, ("scada", "dnp3", "iec104", "iec61850")) and words & {"breaker", "trip", "recloser",
                                                                                          "feeder", "substation"}:
             _energy(tw, args, o)
         else:
             _plc(srv, tw, args, o, "plc")
-    elif "bacnet" in srv or "bacnet" in words:
+    elif _srv(srv, ("bacnet",)) or "bacnet" in words:
         _bacnet(tw, args, o)
-    elif any(s in srv for s in ("mqtt", "mosquitto", "emqx", "hivemq", "aws_iot", "iot_core", "azure_iot", "zigbee2mqtt",
+    elif _srv(srv, ("mqtt", "mosquitto", "emqx", "hivemq", "aws_iot", "iot_core", "azure_iot", "zigbee2mqtt",
                                 "tasmota", "thingsboard", "node_red", "nodered")) or "mqtt" in words:
         if not _is_read(tw) and (words & {"publish", "send", "pub", "command", "set", "write"}):
             _mqtt_topic(str(_get(args, "topic", "channel", default="") or ""),
                         _get(args, "payload", "message", "msg", "data", "value", default=None), o)
-    elif any(s in srv for s in ("cnc", "gcode", "octoprint", "klipper", "moonraker", "grbl", "marlin", "linuxcnc",
+    elif _srv(srv, ("cnc", "gcode", "octoprint", "klipper", "moonraker", "grbl", "marlin", "linuxcnc",
                                 "fanuc", "haas", "mazak", "heidenhain", "mach3", "mach4", "duet", "reprap", "prusa",
                                 "bambu", "printer3d", "3dprinter", "laser", "lightburn", "smoothie", "fluidnc")) or \
             words & {"gcode", "spindle"} or _gcode_arg(args):
         _cnc(tw, args, o)
-    elif any(s in srv for s in ("ros", "ros2", "rosbridge", "moveit", "nav2", "robot", "ur_", "universal_robots",
-                                "fanuc_robot", "abb", "kuka", "franka", "spot", "boston")) and srv not in ("rossmann",):
+    elif _srv(srv, ("ros", "ros2", "rosbridge", "moveit", "nav2", "robot", "ur", "universal_robots",
+                                "fanuc_robot", "abb", "kuka", "franka", "spot", "boston")):
         _ros(tw, args, o)
-    elif any(s in srv for s in ("mavlink", "mavsdk", "px4", "ardupilot", "dronekit", "dji", "drone", "uav", "skydio")):
+    elif _srv(srv, ("mavlink", "mavsdk", "px4", "ardupilot", "dronekit", "dji", "drone", "uav", "skydio")):
         _mavlink(tw, args, o)
-    elif any(s in srv for s in _VEHICLE_SERVERS):
+    elif _srv(srv, _VEHICLE_SERVERS):
         _vehicle(tw, args, o)
-    elif any(s in srv for s in ("homeassistant", "home_assistant", "hass", "smartthings", "hubitat", "homey", "openhab",
+    elif _srv(srv, ("homeassistant", "home_assistant", "hass", "smartthings", "hubitat", "homey", "openhab",
                                 "domoticz", "hue", "homekit", "google_home", "alexa", "tuya", "shelly", "nest",
                                 "ecobee", "ring", "camera", "nvr", "unifi_protect", "frigate", "bms", "building",
                                 "knx", "loxone", "crestron", "control4", "savant", "fibaro", "zwave", "zigbee",
                                 "matter", "iot", "home")):
         _home(tw, args, o)
-    elif any(s in srv for s in ("energy", "inverter", "solar", "battery", "evcharger", "ev_charger", "charger", "ocpp",
+    elif _srv(srv, ("energy", "inverter", "solar", "battery", "evcharger", "ev_charger", "charger", "ocpp",
                                 "wallbox", "grid", "substation", "powerwall", "enphase", "solaredge", "victron",
                                 "fronius", "sma", "huawei_solar", "tibber", "utility", "meter")):
         _energy(tw, args, o)
-    elif "sap" in srv or "sap" in words or _get(args, "tcode", "transaction_code", "bapi", default=None):
+    elif _srv(srv, ("sap",)) or "sap" in words or _get(args, "tcode", "transaction_code", "bapi", default=None):
         _sap(tw, args, o)
-    if any(s in srv for s in _PHONE_SERVERS):
+    if _srv(srv, _PHONE_SERVERS):
         _phone(tw, args, o)
-    if tool.lower() == "computer" or any(s in srv for s in _GUI_SERVERS) or \
+    if tool.lower() == "computer" or _srv(srv, _GUI_SERVERS) or \
             (words & {"click", "type", "keypress", "key", "mouse"} and words & _GUI_WRITE and
              not o.effects and srv in ("", "computer")):
         _gui(name, tw, args, o)

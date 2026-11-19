@@ -105,3 +105,14 @@ def test_coding_work_has_no_effect():
               T("mcp__github__create_pull_request", title="x"), T("mcp__slack__post_message", channel="C", text="hi"),
               W("POST", "https://api.github.com/repos/a/b/issues", '{"title":"x"}')):
         assert rec(a)["effects"] == [], a
+
+
+def test_server_names_match_whole_words():
+    """v0.1.58: claude-code-remote is not an OT server, microsoft is not ROS, spring is not a doorbell."""
+    for n in ("mcp__claude-code-remote__add_repo", "mcp__microsoft__create_event", "mcp__spring__set_property",
+              "mcp__spotify__set_volume", "mcp__honest__update_record", "mcp__recipes__write_recipe"):
+        assert rec(T(n, value=5, name="x"))["effects"] == [], n
+    assert rec(T("mcp__ros2__publish", topic="/cmd_vel", message={}))["effects"] == ["motion"]
+    assert rec(T("mcp__homeassistantmcp__call_service", domain="lock", service="unlock",
+                 entity_id="lock.door"))["effects"] == ["physical_access"]
+    assert rec(T("mcp__siemens-s7__set_cpu_mode", host="h", mode="STOP"))["effects"] == ["mode"]
