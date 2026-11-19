@@ -18,12 +18,12 @@ from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
            "packs_dir", "set_packs_dir", "PacksNotInstalled"]
-__version__ = "0.1.55"
+__version__ = "0.1.56"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
 PACKS_DIR = Path(__file__).parent / "packs"
-PACKS = ("coding", "ops", "strict", "harness")
+PACKS = ("coding", "ops", "strict", "harness", "industrial", "building", "finance", "gui")
 _packs_dir: Path | None = None
 
 
@@ -90,6 +90,8 @@ class Gate:
         decision = self.policies.evaluate(action_type, agent, context, agent_attrs)
         if decision.outcome == ALLOW and (record["reads_secret"] or record["tool_reads_secret"]):
             session.secret_read = True
+        if decision.outcome == ALLOW:
+            session.note_done(record)
         if decision.outcome == DENY:
             session.denials += 1
         elif decision.outcome == CONFIRM:
@@ -104,6 +106,8 @@ class Gate:
         normalized = decision.record.get("normalized", {})
         if decision.outcome == CONFIRM and (normalized.get("reads_secret") or normalized.get("tool_reads_secret")):
             session.secret_read = True
+        if decision.outcome == CONFIRM:
+            session.note_done(normalized)
         name = str(decision.record.get("action", {}).get("name", ""))
         if decision.outcome == CONFIRM and session.tool_changed(name):
             session.repin(name)

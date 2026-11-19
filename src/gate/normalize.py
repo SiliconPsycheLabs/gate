@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 
 import bashlex
 
+from . import domains as _domains
 from .config import Config
 
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "fish", "ash"}
@@ -322,6 +323,7 @@ DECODE_RE = re.compile(r"(base64\s+(-d|--decode)|xxd\s+-r|openssl\s+enc\s+-d|gun
 
 def default_record() -> dict:
     return {
+        **_domains.default_fields(),
         "parse_ok": True,
         "eval_like": False,
         "substitution": False,
@@ -2614,6 +2616,14 @@ def _is_admin_address(v: str) -> bool:
 
 
 def normalize(action: dict, config: Config) -> dict:
+    """Dispatch on action["type"], then read what the action does in machines and business systems (domains.py)."""
+    rec = _normalize_route(action, config)
+    if rec.get("parse_ok", True) or action.get("type") == "tool":
+        _domains.annotate(action, rec, config)
+    return rec
+
+
+def _normalize_route(action: dict, config: Config) -> dict:
     """Dispatch on action["type"]. Unknown types get a record with parse_ok False (fail closed)."""
     t = action.get("type", "unknown")
     cwd = action.get("cwd")

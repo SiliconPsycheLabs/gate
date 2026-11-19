@@ -12,6 +12,31 @@ hand-written loop), where nothing between the model and your shell decides what 
 
 From [Silicon Psyche Labs](https://splabs.io). Apache-2.0.
 
+## Machines and business systems (v0.1.56)
+
+A tool call is also read by what its protocol says, not only by the words of its name: Modbus functions and
+registers, OPC UA writes and method calls, S7 and other PLC modes, programs and forced I/O, BACnet writes and their
+priority, MQTT command topics, G-code lines, ROS 2 topics and services, MAVLink commands, Home Assistant
+`domain.service`, breakers and inverters, SAP transaction codes, function modules and OData entity sets, bank fields in
+any system (an IBAN is checked by its checksum), postings, filings, payroll, signatures, prices, computer-use clicks and
+outbound calls. The record gains `effects` (setpoint, actuate, motion, mode, program, safety, physical_access,
+bank_details, ledger_post, money, commitment, filing, pay_change, grant, price, delete, gui_opaque, gui_sensitive,
+call), `domain`, `assets`, `values` and `amount_max`.
+
+The owner declares their machines in `Config.assets`:
+
+```python
+Config(assets=[
+    {"match": "opcua:ns=2;s=Line1.Oven.*", "class": "production", "min": 150, "max": 250},
+    {"match": ["plc:*Safety*"], "class": "safety"},
+    {"match": "ros:/cmd_vel", "class": "lab", "max_writes": 20},
+])
+```
+
+and the record says, for each action, which classes it touches, whether a target is undeclared and whether a value is
+outside its range. The session remembers a bank-detail change (so a payment after it can be refused) and how many
+writes each machine received.
+
 ## Why deterministic
 
 You cannot tell from text alone whether an action is the one you wanted: a planted instruction and a real request
