@@ -2306,7 +2306,9 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
     # get_api_key) reads a secret the way a secret-store read does, with or without a server; a list of names, a
     # policy or a status is not the value
     names_credential = bool(words & {"privatekey", "apikey", "passwords", "credentials"}) or {"private", "key"} <= words \
-        or {"api", "key"} <= words or {"secret", "value"} <= words
+        or {"api", "key"} <= words or {"secret", "value"} <= words \
+        or (bool(words & {"vault", "keychain", "keyring", "passwordvault"}) and bool(words & {"export", "dump", "backup",
+                                                                                           "download", "copy"}))
     if names_credential and words & {"export", "get", "read", "dump", "fetch", "reveal", "show", "download", "copy",
                                       "retrieve", "extract", "print", "display", "view"} \
             and not words & {"list", "policy", "rotation", "expiry", "status", "strength", "hint", "names", "metadata"}:
@@ -2594,8 +2596,14 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
+# An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
+# value, an override that is set turns the check it overrides off, unless it is set to false or empty.
+_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$", re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
 _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+                       # hidden or debug data and a debug mode switched on (v0.1.68: include_hidden=true,
+                       # debug_mode=true in a read were allowed)
+                       r"|^(?:include_|show_)(?:hidden|deleted|archived_?secrets?|internal)$|^debug(?:_?mode)?$"
                        # a container given the host's powers (v0.1.66: docker_run privileged=true was allowed)
                        r"|^(?:privileged|host_?network|host_?pid|host_?ipc|allow_?privilege_?escalation)$"
                        # data a read or an export leaves out by default, and approvals or consents forced through
@@ -2606,7 +2614,8 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        r"|^(?:consent|approval)_override$|^revive_\w+$", re.I)
 # On a read or an export only the flags that change what data comes out count (a filter such as public=true on a list
 # is not a safeguard turned off).
-_READ_SAFEGUARD_RE = re.compile(r"^include_|anonymi|pseudonymi|mask|redact|consent|public_view|sanitiz|encrypt", re.I)
+_READ_SAFEGUARD_RE = re.compile(r"^include_|^show_|anonymi|pseudonymi|mask|redact|consent|public_view|sanitiz|encrypt|"
+                                r"override|^debug|backdoor", re.I)
 FALSE = {False, "false", "no", "off", "0", "disabled", "none", 0}
 # A check set by a word that says it was not done (v0.1.67: biometric_scan="bypassed", id_check="skipped" were allowed)
 _SKIPPED = FALSE | {"bypassed", "bypass", "skipped", "skip", "ignored", "ignore", "waived", "not_required",
@@ -2640,6 +2649,9 @@ def _checks_off(arguments, depth=0, out=None):
                 elif _OFF_KEY.match(k2) and _CHECK_KEY.search(k2.split("_", 1)[1]) and vv in TRUE:
                     out.append(k2)
                 elif _OPEN_KEY.match(k2) and vv in TRUE:
+                    out.append(k2)
+                elif _OVERRIDE_KEY.match(k2) and vv not in FALSE and vv not in ("", None) and not k2.startswith(
+                        ("consent_", "approval_")):
                     out.append(k2)
                 elif _VISIBILITY_KEY.match(k2) and isinstance(vv, str) and vv in _OPEN_VALUES:
                     out.append(k2)
