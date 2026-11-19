@@ -41,6 +41,7 @@ def context_shape() -> dict:
         "workspace": {"type": "String"}, "egress_hosts": strset, "egress_listed": {"type": "Boolean"}, "environment": {"type": "String"},
         "change_window": {"type": "Boolean"}, "default_branches": strset,
         "assets_registered": {"type": "Boolean"}, "money_limit": {"type": "Long"}, "contract_declared": {"type": "Boolean"},
+        "off_limits_declared": {"type": "Boolean"},
     }
     return {"type": "Record", "attributes": {
         "n": {"type": "Record", "attributes": n},
