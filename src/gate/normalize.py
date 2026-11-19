@@ -529,13 +529,16 @@ class _Ctx:
         r["deletes_shared_wildcard"] = r["deletes_shared_wildcard"] or any(
             _wildcard_dir(p) is not None and not (Path(_wildcard_dir(p)) == ws or ws in Path(_wildcard_dir(p)).parents)
             for p in self._wild_deletes)
-        r["deletes_protected"] = any(Path(p) == ws or Path(p).name == ".git" or (ws / ".git") in Path(p).parents
+        r["deletes_protected"] = any(Path(p) == ws or Path(p).name.lower() == ".git" or any(
+                                         q.name.lower() == ".git" and (q.parent == ws) for q in Path(p).parents)
                                      or Path(p) in (Path("/"), self.config.home_path) for p in r["deletes"])
         r["git_remote_urls"] = list(self._git_remote_urls)
         for p in r["writes"]:
-            pp = Path(p)
-            if pp.name == "config" and pp.parent.name == ".git" or any(part == "hooks" and i and pp.parts[i - 1] == ".git"
-                                                                     for i, part in enumerate(pp.parts)):
+            # any write to a path component named .git, at any depth and in any letter case: the hooks and config of
+            # the repository (.GIT/hooks is the same directory on macOS and Windows), and a nested .git file whose
+            # `gitdir:` line points git at another directory whose hooks then run (v0.1.53, SATA-VVAH-01: .GIT/hooks,
+            # .Git/config, .git/HOOKS and vendor/lib/.git were allowed)
+            if any(part.lower() == ".git" for part in Path(p).parts):
                 r["writes_git_internals"] = True
         # A home directory under /home that is the workspace, or holds it, is the agent's own (an agent working in
         # /home/<user>/project lists /home/<user> without a person); any other account's home is still held.
