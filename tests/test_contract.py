@@ -71,3 +71,11 @@ def test_approval_widens_the_contract_for_the_session():
 def test_a_malformed_contract_is_refused(bad):
     with pytest.raises(ValueError):
         gate(bad)
+
+
+@pytest.mark.parametrize("named,value", [("#general", "general"), ("general", "#general"),
+                                         ("www.dora.com", "http://www.dora.com/"), ("@anna", "Anna")])
+def test_a_target_matches_however_it_is_written(named, value):
+    g = gate({"targets": [named]})
+    d, _ = check(g, T("mcp__slack__send_channel_message", channel=value, body="x"))
+    assert d.outcome == "allow", d.record["facts"]["outside_contract"]

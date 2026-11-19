@@ -59,6 +59,19 @@ def _path_in(path: str, patterns: list[str]) -> bool:
     return False
 
 
+def _target_key(v) -> str:
+    """A target as it is compared: lower case, without a leading '#' or '@' (a channel, a handle), without a URL scheme
+    or a trailing '/', so "#general" and "general", "http://www.x.com/" and "www.x.com" are the same target."""
+    s = str(v).strip().lower()
+    for scheme in ("https://", "http://"):
+        if s.startswith(scheme):
+            s = s[len(scheme):]
+    s = s.rstrip("/")
+    while s[:1] in ("#", "@"):
+        s = s[1:]
+    return s
+
+
 def outside(record: dict, contract: dict | None, widened: set) -> list[str]:
     """What this action touches outside the contract, as "tool:<name>", "host:<h>", "target:<v>", "path:<p>",
     sorted; values a person already approved in this session are left out."""
@@ -74,10 +87,10 @@ def outside(record: dict, contract: dict | None, widened: set) -> list[str]:
         out.update(f"host:{h}" for h in record.get("hosts", []) if not _host_in(h, hosts))
     targets = contract.get("targets")
     if targets is not None:
-        allowed = {t.strip().lower() for t in targets}
+        allowed = {_target_key(t) for t in targets}
         values = set(record.get("tool_targets", [])) | set(record.get("tool_send_targets", [])) | \
             set(record.get("payment_targets", []))
-        out.update(f"target:{v}" for v in values if str(v).strip().lower() not in allowed)
+        out.update(f"target:{v}" for v in values if _target_key(v) not in allowed)
     paths = contract.get("paths")
     if paths is not None:
         out.update(f"path:{p}" for p in set(record.get("writes", [])) | set(record.get("deletes", []))
