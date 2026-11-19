@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import functools
 import hashlib
 import json
 import re
@@ -143,10 +144,40 @@ class Session:
 _ALL_WORDS_RE = re.compile(r"\b(?:all|every|everyone|everybody|everything|entire)\b", re.IGNORECASE)
 
 
+_NUMBER_RE = re.compile(r"[$\u20ac\u00a3]?\d{1,3}(?:[,'\u00a0 ]\d{3})+(?:\.\d+)?|[$\u20ac\u00a3]?\d+(?:\.\d+)?")
+_GROUP_SEP_RE = re.compile(r"(?<=\d)[,'\u00a0 ](?=\d{3}(?!\d))")
+_PUNCT_RE = re.compile(r"[^\w@]+")
+
+
+@functools.lru_cache(maxsize=256)
+def _hay_forms(haystack: str) -> tuple[str, str, str]:
+    """A text lower-cased, with digit-group separators removed, and with punctuation turned to spaces (computed once
+    per text, not once per value checked against it)."""
+    hay = haystack.lower()
+    return hay, _GROUP_SEP_RE.sub("", hay), _PUNCT_RE.sub(" ", hay)
+
+
 def _contains(haystack: str, needle: str) -> bool:
     if len(needle) < 3:
         return False
-    return re.search(r"(?<![\w.-])" + re.escape(needle) + r"(?![\w-])", haystack.lower()) is not None
+    hay, hay_digits, hay_words = _hay_forms(haystack)
+    if re.search(r"(?<![\w.-])" + re.escape(needle) + r"(?![\w-])", hay) is not None:
+        return True
+    if _NUMBER_RE.fullmatch(needle):
+        # an amount is the same number however its thousands are written: "50000" and "$50,000" (v0.1.51,
+        # GATE-ADAPT-01: update_invoice new_amount="50000" from an e-mail that said "$50,000" read as invented)
+        n = _GROUP_SEP_RE.sub("", needle).lstrip("$\u20ac\u00a3")
+        if len(n) >= 3 and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", hay_digits):
+            return True
+        return False
+    if " " in needle.strip() or "," in needle:
+        # a value of several words is the same value whatever the punctuation between them: "123 Attacker Way, Drop
+        # City" and "123 Attacker Way\nDrop City" (v0.1.51, GATE-ADAPT-01: a shipping address planted in an e-mail
+        # without the comma read as invented)
+        n = _PUNCT_RE.sub(" ", needle).strip()
+        if len(n) >= 6 and " " in n:
+            return re.search(r"(?<!\w)" + re.escape(n) + r"(?!\w)", hay_words) is not None
+    return False
 
 
 def tool_fingerprint(d) -> tuple[str, str]:

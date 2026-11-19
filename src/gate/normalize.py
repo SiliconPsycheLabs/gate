@@ -641,8 +641,35 @@ def _net_in_code(code: str) -> bool:
     return bool(INLINE_NET_RE.search(_STRING_LITERAL_RE.sub("''", code)))
 
 
+_EXPAND_WRAP_RE = re.compile(r"\bos\.path\.expanduser\(\s*((['\"])[^'\"\n]{1,512}\2)\s*\)")
+_PATH_EXPAND_RE = re.compile(r"\bPath\(\s*((['\"])[^'\"\n]{1,512}\2)\s*\)\.expanduser\(\s*\)")
+_PATH_ASSIGN_RE = re.compile(r"^[ \t]*([A-Za-z_]\w*)\s*=\s*(Path\()?\s*((['\"])[^'\"\n]{1,512}\4)\s*\)?[ \t]*(?:#.*)?$",
+                             re.M)
+
+
+def _inline_paths_resolved(code: str) -> str:
+    """The code with a path written through a helper or a variable put back in place, so the write and delete
+    patterns see it: open(os.path.expanduser("~/.bashrc"), "a"), or p = "~/.bashrc" then open(p, "a") (v0.1.51,
+    GATE-ADAPT-01: python code appended to ~/.bashrc through a variable and the write was not read)."""
+    code = _EXPAND_WRAP_RE.sub(r"\1", code)
+    code = _PATH_EXPAND_RE.sub(r"Path(\1)", code)
+    names = {}
+    for m in _PATH_ASSIGN_RE.finditer(code):
+        lit = m.group(3)
+        if _fixed_path(lit[1:-1]):
+            names[m.group(1)] = lit
+    for name, lit in names.items():
+        n = re.escape(name)
+        code = re.sub(r"\bopen\(\s*" + n + r"\s*,", "open(" + lit + ",", code)
+        code = re.sub(r"(?<![\w.])" + n + r"\.(write_text|write_bytes|touch|unlink|open)\(", "Path(" + lit + r").\1(", code)
+        code = re.sub(r"\b(os\.remove|os\.unlink|shutil\.rmtree)\(\s*" + n + r"\s*\)", r"\1(" + lit + ")", code)
+        code = re.sub(r"\bPath\(\s*" + n + r"\s*\)", "Path(" + lit + ")", code)
+    return code
+
+
 def scan_inline_code(code: str) -> dict:
     """Plain forms of network access, process start and a read of the whole environment in inline interpreter code."""
+    code = _inline_paths_resolved(code)
     net = _net_in_code(code)
     hosts = []
     if net:
@@ -1621,6 +1648,42 @@ def _tool_arg_values(arguments, out: list[str], depth: int = 0) -> None:
                 out.append(x)
 
 
+_RUN_EMAIL_RE = re.compile(r"(?<![\w.+-])[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}(?![\w-])")
+_RUN_HOST_RE = re.compile(r"(?<![\w@./-])((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}(?::\d{2,5})?)"
+                          r"(?![\w-])")
+
+
+def _run_text_addresses(arguments, depth: int = 0) -> list[str]:
+    """E-mail addresses and host names written inside a command or code a tool runs (command=, script=, code=), so
+    provenance sees them as values of the call: a whole command is a value only when it fits in 200 characters, and an
+    address inside it was never looked up (v0.1.51, GATE-ADAPT-01: execute_shell ran
+    `update_agent_config '{"primary_execution_env": "evil-host.example.com:4444"}' && ...`, the host planted in an
+    e-mail, and no rule could see where it came from). A word with a file suffix (main.py, notes.txt) is not a host."""
+    out: list[str] = []
+    if depth > 6:
+        return out
+    keys = set(TOOL_SHELL_ARG_KEYS) | TOOL_CODE_ARG_KEYS
+    items = arguments.items() if isinstance(arguments, dict) else (
+        (("", v) for v in arguments) if isinstance(arguments, list) else [])
+    for k, v in items:
+        if isinstance(v, (dict, list)):
+            out.extend(_run_text_addresses(v, depth + 1))
+        elif isinstance(v, str) and str(k).lower() in keys:
+            for m in _RUN_EMAIL_RE.finditer(v):
+                out.append(m.group(0))
+            # in code a dotted word outside a string is a name (os.path.join, requests.get), so only strings count
+            text = v if str(k).lower() in TOOL_SHELL_ARG_KEYS and k != "script" else " ".join(
+                m.group(0) for m in _STRING_LITERAL_RE.finditer(v))
+            for m in _RUN_HOST_RE.finditer(_RUN_EMAIL_RE.sub(" ", text)):
+                if text[m.end():m.end() + 1] == "(":
+                    continue
+                h = m.group(1)
+                if h.split(":", 1)[0].rsplit(".", 1)[-1].lower() not in FILE_SUFFIXES and not re.fullmatch(
+                        r"[\d.:]+", h) and 3 <= len(h) <= 200:
+                    out.append(h)
+    return out
+
+
 _TOOL_PACKAGE_KEYS = ("name", "package", "packages", "pkg", "module", "modules", "dependency", "dependencies", "library")
 
 
@@ -1678,6 +1741,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     rec["tool_send_targets"] = sorted(set(send))
     values: list[str] = []
     _tool_arg_values(arguments if arguments is not None else {}, values)
+    values.extend(v for v in _run_text_addresses(arguments) if v not in values)
     rec["tool_arg_values"] = sorted(set(values))
     rec["tool_destructive_db"] = any(_destructive_db(v) for v in values)
     rec["tool_destructive_store"] = _destructive_store(tool, arguments)
