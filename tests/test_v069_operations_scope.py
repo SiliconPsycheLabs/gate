@@ -1,4 +1,4 @@
-"""v0.1.67: the task contract names operations the task asks for (closed list, fact contract_operations), and a read
+"""v0.1.69: the task contract names operations the task asks for (closed list, fact contract_operations), and a read
 outside the task's scope is marked (reads_outside_scope). The contract grants nothing else (PSA #7812, GATE-DBENCH-04)."""
 
 import pytest

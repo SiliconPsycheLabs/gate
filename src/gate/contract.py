@@ -12,7 +12,7 @@ that value, for the rest of the session. No contract, or a dimension left out of
      "paths": ["/srv/app", "/data/exports/*"],     # directories or patterns the work may write or delete under
      "operations": ["git-history-rewrite"]}        # operations the task asks for (closed list, OPERATIONS)
 
-Since v0.1.67 (PSA #7812, GATE-DBENCH-04) the contract can also name operations the task asks for, from a closed list;
+Since v0.1.69 (PSA #7812, GATE-DBENCH-04) the contract can also name operations the task asks for, from a closed list;
 they reach the rules as the fact contract_operations, and the maintained packs do not hold them. Its plain directories
 count as inside the task for reads_outside_scope (pack scope). The contract grants nothing else: its paths and hosts
 still only constrain (measured: letting them open writes, egress and off-limits paths freed as many bad calls as
@@ -24,7 +24,7 @@ from __future__ import annotations
 import fnmatch
 
 DIMENSIONS = ("tools", "hosts", "targets", "paths", "operations")
-# what a task may ask for that a rule would otherwise hold (v0.1.67): rewriting or discarding git history
+# what a task may ask for that a rule would otherwise hold (v0.1.69): rewriting or discarding git history
 OPERATIONS = ("git-history-rewrite", "git-discard")
 
 
