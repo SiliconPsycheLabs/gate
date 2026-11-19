@@ -324,6 +324,10 @@ Signing and checking signatures need `pip install "splabs-gate[signing]"`.
   and LM Studio caches under the agent's home); a write, move or deletion under them, or of a weights file anywhere,
   sets `writes_model_weights`.
 - `Config.workspaces_root`: the directory that holds the workspaces of agents that share a machine.
+- `Config.off_limits` (v0.1.64): paths and services the agent must never read or contact (an evaluator's tests, a
+  harness's logs and control files). A path matches itself and what is under it, also when written as a whole token
+  in a command or in code; `host:port` and bare host entries match URLs and hosts. Sets `reads_off_limits`. A search
+  of the whole disk (`find /`, a recursive `grep` on `/`) sets `sweeps_root`.
 - `ls`, `find`, `du` and `tree` with no path read the current directory: `cd /root && ls` is a look at `/root`.
 - Code given inline to an interpreter (`python -c`, `node -e`, a here-document) is scanned for the plain forms of
   network access, process start, a read of the whole environment, files removed or written with a path written out,

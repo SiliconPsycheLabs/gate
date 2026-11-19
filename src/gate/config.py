@@ -58,6 +58,11 @@ class Config:
         one session may make without a person. Default none: every machine write is undeclared.
     money_limit: the amount (whole units of the account's currency) up to which a posting, an order or a pay change
         does not need a person in the finance pack. Default 0: every one does.
+    off_limits: paths and services the agent must never read or contact (PSA #7812, GATE-DBENCH-02): an evaluator's
+        tests, a harness's logs and control files, another tenant's data. A path matches itself and everything under
+        it; an entry with a colon and no leading slash ("localhost:2280") is a service, an entry without either a
+        host. A read or a listed path under one, a URL or host that is one, or the path written as a whole token in a
+        command's or a tool's text (code included) sets reads_off_limits. Default none.
     contract: the task contract of this session (gate/contract.py): the tools, hosts, targets and paths the work may
         touch, declared before the agent reads any data. What an action touches outside it is the fact
         outside_contract. Default none: no contract.
@@ -79,6 +84,7 @@ class Config:
     assets: list[dict] = field(default_factory=list)
     money_limit: int = 0
     contract: dict | None = None
+    off_limits: list[str] = field(default_factory=list)
 
     @property
     def workspace_path(self) -> Path:
@@ -121,6 +127,7 @@ class Config:
             "assets_registered": bool(self.assets),
             "money_limit": int(self.money_limit or 0),
             "contract_declared": bool(self.contract),
+            "off_limits_declared": bool(self.off_limits),
         }
 
     @classmethod

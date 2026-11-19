@@ -365,6 +365,8 @@ def default_record() -> dict:
         "writes_git_internals": False,
         "reads_identity": False,
         "reads_other_workspace": False,
+        "reads_off_limits": False,
+        "sweeps_root": False,
         "package_install": False,
         "package_manager": "",
         "packages": [],
@@ -2708,7 +2710,57 @@ def normalize(action: dict, config: Config) -> dict:
     rec = _normalize_route(action, config)
     if rec.get("parse_ok", True) or action.get("type") == "tool":
         _domains.annotate(action, rec, config)
+    _off_limits(action, rec, config)
     return rec
+
+
+# A search of the whole disk: `find /` (also `find / -name x`), or a recursive grep whose search root is `/` (v0.1.64).
+_ROOT_SWEEP = re.compile(r"\bfind\s+(?:-[HLP]\s+)*/(?=\s|$|;|\))|\bgrep\s+(?:-\S*\s+)*-\S*[rR]\S*\s+(?:\S+\s+)*?/(?=\s|$|;|\))")
+
+
+def _action_text(action: dict) -> str:
+    if action.get("type") == "tool":
+        try:
+            args = json.dumps(action.get("arguments", {}), ensure_ascii=False)
+        except (TypeError, ValueError):
+            args = str(action.get("arguments", ""))
+        return str(action.get("name", "")) + " " + args
+    parts = [action.get("command"), action.get("url"), action.get("body")]
+    if action.get("argv"):
+        parts.append(" ".join(str(a) for a in action["argv"]))
+    return " ".join(str(p) for p in parts if p)
+
+
+def _off_limits(action: dict, rec: dict, config: Config) -> None:
+    """reads_off_limits and sweeps_root (v0.1.64, PSA #7812 GATE-DBENCH-02): the owner's off-limits paths and services
+    (Config.off_limits) touched by the action's paths, URLs and hosts, or written as a whole token in its text; and a
+    search of the whole disk. String match on the action object only."""
+    text = _action_text(action)
+    if action.get("type") == "shell" or action.get("argv"):
+        rec["sweeps_root"] = bool(_ROOT_SWEEP.search(text))
+    if not config.off_limits:
+        return
+    paths = [config.expand_home(p).rstrip("/") or "/" for p in config.off_limits if p.startswith(("/", "~"))]
+    services = [s.lower() for s in config.off_limits if not s.startswith(("/", "~")) and ":" in s]
+    hosts = [h.lower() for h in config.off_limits if not h.startswith(("/", "~")) and ":" not in h]
+    touched = list(rec.get("reads", [])) + list(rec.get("paths", []))
+    if action.get("type", "").startswith("file.") and action.get("path"):
+        touched.append(str(action["path"]))
+
+    def under(p: str) -> bool:
+        pp = Path(p)
+        return any(pp == Path(q) or Path(q) in pp.parents for q in paths)
+    hit = any(under(p) for p in touched if p.startswith("/"))
+    if not hit and paths:
+        tok = re.compile(r"(?<![\w.\-/~$])(" + "|".join(re.escape(q) for q in paths)
+                         + r")(?=$|[/\s'\"`;|&()*:,\]}<>])")
+        hit = bool(tok.search(text))
+    if not hit and services:
+        low = text.lower() + " " + " ".join(rec.get("urls", [])).lower()
+        hit = any(re.search(r"(?<![\w.\-])" + re.escape(s) + r"(?![\w])", low) for s in services)
+    if not hit and hosts:
+        hit = any(h.lower() in hosts for h in rec.get("hosts", []))
+    rec["reads_off_limits"] = hit
 
 
 def _normalize_route(action: dict, config: Config) -> dict:
