@@ -251,6 +251,16 @@ On 3,000 distinct shell commands from real coding-agent sessions (OpenHands on P
 `nebius/SWE-rebench-openhands-trajectories`) every command parses. On the 7,587 human-written one-liners of NL2Bash,
 99.7% parse; 20 of the rest are not valid shell as written.
 
+## Speed
+
+A check is a parse of the action, a provenance lookup and one Cedar evaluation. The policy set is parsed once. Above
+2,000 rules the policies are grouped by the first fact their condition needs (`network` is true, `hosts` is not
+empty, `http_method` is `DELETE`) and a check evaluates only the groups whose fact holds on its record; the answer is
+the one Cedar gives on the whole set. Provenance is computed incrementally: a check scans only the texts observed
+since the previous one. On one core of a cloud container, with 54 rules: about 1 ms per check; with 20,000 added
+rules that never match, about 4 ms; with 20,000 copies of real rules, about 31 ms; with 2,000 tool outputs of 300
+words in the session, about 4 ms.
+
 ## Log
 
 With `log_path`, every decision is appended as one JSON line (action, normalised record, facts, outcome, rule ids),

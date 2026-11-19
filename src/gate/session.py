@@ -43,6 +43,11 @@ class Session:
     asset_writes: dict[str, int] = field(default_factory=dict)
     denials: int = 0
     holds: int = 0
+    # Provenance computed incrementally (v0.1.56, PSA #7789): for each value already looked up, how far each list of
+    # texts has been scanned and what was found, so a check scans only the texts observed since the last one.
+    _prov: dict = field(default_factory=dict, repr=False, compare=False)
+    _tool_version: int = field(default=0, repr=False, compare=False)
+    _forms: dict = field(default_factory=dict, repr=False, compare=False)
 
     def observe_tools(self, definitions, server: str = "") -> None:
         """The tool definitions the agent was given, at the start and whenever they are listed again (MCP
@@ -86,6 +91,8 @@ class Session:
         self.user_messages.append(text)
 
     def observe_tool_output(self, tool_id: str, text: str) -> None:
+        if tool_id in self.tool_outputs:
+            self._tool_version += 1        # a text replaced in place: earlier scans no longer hold
         self.tool_outputs[tool_id] = text
 
     def provenance(self, value: str, package: bool = False, exact: bool = False) -> str:
@@ -103,20 +110,53 @@ class Session:
             # a path is known by its file name too (`units.py` for `shipcalc/units.py`); a URL is not: the last
             # segment of a planted link (`donate.example/<site name>`) would otherwise match the site the user named
             variants.add(v.rsplit("/", 1)[-1])
-        if any(_contains(m, x) for m in self.user_messages for x in variants):
+        variants = tuple(sorted(variants))
+        key = variants
+        st = self._prov.get(key)
+        trusted_key = tuple(self.trusted_tools)
+        system_key = tuple(self.system_values)
+        if (st is None or st["tv"] != self._tool_version or st["trk"] != trusted_key
+                or st["t_i"] > len(self.tool_outputs) or st["u_i"] > len(self.user_messages)):
+            st = {"u_i": 0, "u": False, "s_k": None, "s": False, "t_i": 0, "t": False, "tr": False,
+                  "tv": self._tool_version, "trk": trusted_key}
+            self._prov[key] = st
+        if not st["u"]:
+            for m in self.user_messages[st["u_i"]:]:
+                if any(self._has(m, x) for x in variants):
+                    st["u"] = True
+                    break
+        st["u_i"] = len(self.user_messages)
+        if st["u"]:
             return "user"
-        if any(_contains(s, x) for s in self.system_values for x in variants):
+        if st["s_k"] != system_key:
+            st["s"] = any(_contains(s, x) for s in self.system_values for x in variants)
+            st["s_k"] = system_key
+        if st["s"]:
             return "system"
-        trusted = []
-        for tool_id, text in self.tool_outputs.items():
-            if self._trusted(tool_id):
-                trusted.append(text)
-                continue
-            if any(_contains(text, x) for x in variants):
-                return "tool_output"          # outside data wins over a trusted record that also holds the value
-        if any(_contains(text, x) for text in trusted for x in variants):
+        if not st["t"]:
+            items = list(self.tool_outputs.items())[st["t_i"]:]
+            for tool_id, text in items:
+                if self._trusted(tool_id):
+                    if not st["tr"] and any(self._has(text, x) for x in variants):
+                        st["tr"] = True
+                    continue
+                if any(self._has(text, x) for x in variants):
+                    st["t"] = True
+                    break
+        st["t_i"] = len(self.tool_outputs)
+        if st["t"]:
+            return "tool_output"          # outside data wins over a trusted record that also holds the value
+        if st["tr"]:
             return "trusted"
         return "model"
+
+    def _has(self, text: str, needle: str) -> bool:
+        """_contains on an observed text, with the text's lower-cased forms kept for the session."""
+        forms = self._forms.get(id(text))
+        if forms is None or forms[0] is not text:
+            forms = (text, _forms_of(text))
+            self._forms[id(text)] = forms
+        return _contains_forms(forms[1], needle)
 
     def _trusted(self, tool_id: str) -> bool:
         name = str(tool_id).split(":", 1)[0]
@@ -165,25 +205,37 @@ _GROUP_SEP_RE = re.compile(r"(?<=\d)[,'\u00a0 ](?=\d{3}(?!\d))")
 _PUNCT_RE = re.compile(r"[^\w@]+")
 
 
+def _forms_of(haystack: str) -> tuple[str, str, str]:
+    hay = haystack.lower()
+    return hay, _GROUP_SEP_RE.sub("", hay), _PUNCT_RE.sub(" ", hay)
+
+
 @functools.lru_cache(maxsize=256)
 def _hay_forms(haystack: str) -> tuple[str, str, str]:
     """A text lower-cased, with digit-group separators removed, and with punctuation turned to spaces (computed once
     per text, not once per value checked against it)."""
-    hay = haystack.lower()
-    return hay, _GROUP_SEP_RE.sub("", hay), _PUNCT_RE.sub(" ", hay)
+    return _forms_of(haystack)
 
 
 def _contains(haystack: str, needle: str) -> bool:
     if len(needle) < 3:
         return False
-    hay, hay_digits, hay_words = _hay_forms(haystack)
-    if re.search(r"(?<![\w.-])" + re.escape(needle) + r"(?![\w-])", hay) is not None:
+    return _contains_forms(_hay_forms(haystack), needle)
+
+
+def _contains_forms(forms: tuple[str, str, str], needle: str) -> bool:
+    if len(needle) < 3:
+        return False
+    hay, hay_digits, hay_words = forms
+    # each form is searched only when the needle occurs in it as plain text (the regular expressions below match
+    # nothing otherwise), which skips most texts at the cost of a substring test
+    if needle in hay and re.search(r"(?<![\w.-])" + re.escape(needle) + r"(?![\w-])", hay) is not None:
         return True
     if _NUMBER_RE.fullmatch(needle):
         # an amount is the same number however its thousands are written: "50000" and "$50,000" (v0.1.51,
         # GATE-ADAPT-01: update_invoice new_amount="50000" from an e-mail that said "$50,000" read as invented)
         n = _GROUP_SEP_RE.sub("", needle).lstrip("$\u20ac\u00a3")
-        if len(n) >= 3 and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", hay_digits):
+        if len(n) >= 3 and n in hay_digits and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", hay_digits):
             return True
         return False
     if " " in needle.strip() or "," in needle:
@@ -192,7 +244,7 @@ def _contains(haystack: str, needle: str) -> bool:
         # without the comma read as invented)
         n = _PUNCT_RE.sub(" ", needle).strip()
         if len(n) >= 6 and " " in n:
-            return re.search(r"(?<!\w)" + re.escape(n) + r"(?!\w)", hay_words) is not None
+            return n in hay_words and re.search(r"(?<!\w)" + re.escape(n) + r"(?!\w)", hay_words) is not None
     return False
 
 
