@@ -89,6 +89,9 @@ SECRET_PATTERNS_ANY_CASE = [
     "*/login data", "login data", "*/key4.db", "*/key3.db", "*/logins.json", "*/cookies.sqlite",
     "*/.local/share/keyrings/*", "*/library/keychains/*", "*.kdbx", "*/unattend.xml", "*/sysprep.xml",
     "*/groups.xml", "*/web.config",
+    # (v0.1.66) a browser's cookie and form stores, API key files, the MySQL user table
+    "*/google-chrome/*/cookies", "*/google-chrome/cookies", "*/chromium/*/cookies", "*/web data", "*/api_keys.*",
+    "*/api-keys.*", "api_keys.*", "*/mysql/mysql.user*", "*/mysql/user.myd",
 ]
 # Files that hold a model's weights (PSA, 2026-11-18, after arXiv:2611.21885: a model that edits its own weights).
 MODEL_WEIGHT_PATTERNS = ["*.safetensors", "*.safetensors.index.json", "*.gguf", "*.ggml", "*.pt", "*.pth", "*.ckpt",
@@ -2294,6 +2297,15 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
             rec["payment_targets"] = list(rec.get("tool_send_targets", []))
     rec["tool_reads_secret"] = bool(rec["tool_verb_class"] == "read" and server and (
         server in TOOL_SECRET_SERVERS or words & TOOL_SECRET_WORDS))
+    # (v0.1.66) a tool that hands out a credential named in its own name (export_private_key, dump_passwords,
+    # get_api_key) reads a secret the way a secret-store read does, with or without a server; a list of names, a
+    # policy or a status is not the value
+    names_credential = bool(words & {"privatekey", "apikey", "passwords", "credentials"}) or {"private", "key"} <= words \
+        or {"api", "key"} <= words or {"secret", "value"} <= words
+    if names_credential and words & {"export", "get", "read", "dump", "fetch", "reveal", "show", "download", "copy",
+                                      "retrieve", "extract", "print", "display", "view"} \
+            and not words & {"list", "policy", "rotation", "expiry", "status", "strength", "hint", "names", "metadata"}:
+        rec["tool_reads_secret"] = True
     # a call to an MCP server that is not on the agent's own machine reaches an outside service, whatever its verb;
     # a command-running tool is judged by its command instead, and a read from a secret store is the secret itself
     rec["tool_outbound"] = bool(server and server not in TOOL_LOCAL_SERVERS and shell is None
@@ -2385,7 +2397,10 @@ _SECRET_SHAPE_RE = re.compile(
     r"glpat-[A-Za-z0-9_-]{12,}|AIza[0-9A-Za-z_-]{20,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_.-]*)|"
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----|"
     r"[a-z][a-z0-9+.-]*://[^\s:/@]+:(?P<pw>[^\s@/]{3,})@|"
-    r"(?i:(?:^|[;\s])(?:password|pwd)\s*=\s*)(?P<kv>[^;\s'\"]{3,})|"
+    # password=..., password='...' in SQL (v0.1.66: UPDATE auth SET password='Admin123!' was allowed)
+    r"(?i:(?:^|[;\s,(])(?:password|pwd|passwd)\s*=\s*['\"]?)(?P<kv>[^;\s'\"]{3,})|"
+    # Redis: CONFIG SET requirepass <value>, masterauth <value> (v0.1.66)
+    r"(?i:\b(?:requirepass|masterauth)\s+['\"]?)(?P<kv3>[^;\s'\"]{3,})|"
     # NAME_PASSWORD=..., API_TOKEN: ..., in free text (a message body that carries a credential)
     r"(?i:(?:^|[;\s,])[A-Za-z0-9]+_(?:password|passwd|pwd|secret|token|api_?key|access_?key)\s*[=:]\s*)(?P<kv2>[^;\s,'\"$<{]{6,})|"
     r"https://hooks\.slack\.com/services/\S+|"
@@ -2395,6 +2410,8 @@ _SECRET_SHAPE_RE = re.compile(
     r"(?P<card>(?<![\w.-])(?:\d[ -]?){12,18}\d(?![\w.]|-\w))")
 _SECRET_KEY_RE = re.compile(
     r"(?:^|_)(?:password|passwd|pwd|secret|token|api_?key|apikey|access_?key|private_?key|client_?secret|"
+    # one-time, backup and recovery codes, and PINs (v0.1.66: mfa_code=99-221-558 read from a page was allowed)
+    r"mfa_?code|mfa_?secret|otp|totp|otp_?code|backup_?codes?|recovery_?codes?|pin|pin_?code|"
     r"credentials?|authorization|auth_?token|bearer|passphrase|session_?cookie|cookie|encryption_?key|signing_?key|"
     r"auth_?header|card_?number|cvv|cvc)(?:$|_)|^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
 # A key that names a secret but holds something about it, not the secret itself: credentials_ref=prod-db-creds,
@@ -2402,7 +2419,7 @@ _SECRET_KEY_RE = re.compile(
 # addressed to a named secret touches that secret.
 _SECRET_META_KEY_RE = re.compile(
     r"(?:^|_)(?:ref|reference|hint|length|policy|expiry|expires|expiration|ttl|last4|last_?four|required|enabled|"
-    r"provider|url|uri|count)$",
+    r"provider|url|uri|count|delivery|method|channel)$",
     re.IGNORECASE)
 _SECRET_REF_RE = re.compile(r"^\s*(?:\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:\S+|\{\{.*\}\}|<[^>]*>|\*+|x+|redacted)\s*$",
                             re.IGNORECASE)
@@ -2478,7 +2495,7 @@ def _secret_values(arguments) -> list[str]:
                 m = _SECRET_SHAPE_RE.search(x, m.end())
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
-                out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group(0))
+                out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group("kv3") or m.group(0))
             elif (_SECRET_KEY_RE.search(key.replace("-", "_")) and len(x) >= 3
                   and not _SECRET_META_KEY_RE.search(_camel_snake(key))
                   and not x.lower().startswith(("bearer $", "token $"))):
@@ -2574,6 +2591,8 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
 _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+                       # a container given the host's powers (v0.1.66: docker_run privileged=true was allowed)
+                       r"|^(?:privileged|host_?network|host_?pid|host_?ipc|allow_?privilege_?escalation)$"
                        # data a read or an export leaves out by default, and approvals or consents forced through
                        # (v0.1.59: include_pii, include_secrets, public_view, auto_approve, force_opt_in, consent_override)
                        r"|^include_(?:pii|secrets?|raw_?\w*|private\w*|sensitive\w*|opted_?out\w*|unsubscribed\w*|"
@@ -2714,7 +2733,7 @@ def normalize(action: dict, config: Config) -> dict:
     return rec
 
 
-# A search of the whole disk: `find /` (also `find / -name x`), or a recursive grep whose search root is `/` (v0.1.64).
+# A search of the whole disk: `find /` (also `find / -name x`), or a recursive grep whose search root is `/` (v0.1.66).
 _ROOT_SWEEP = re.compile(r"\bfind\s+(?:-[HLP]\s+)*/(?=\s|$|;|\))|\bgrep\s+(?:-\S*\s+)*-\S*[rR]\S*\s+(?:\S+\s+)*?/(?=\s|$|;|\))")
 
 
@@ -2732,7 +2751,7 @@ def _action_text(action: dict) -> str:
 
 
 def _off_limits(action: dict, rec: dict, config: Config) -> None:
-    """reads_off_limits and sweeps_root (v0.1.64, PSA #7812 GATE-DBENCH-02): the owner's off-limits paths and services
+    """reads_off_limits and sweeps_root (v0.1.66, PSA #7812 GATE-DBENCH-02): the owner's off-limits paths and services
     (Config.off_limits) touched by the action's paths, URLs and hosts, or written as a whole token in its text; and a
     search of the whole disk. String match on the action object only."""
     text = _action_text(action)
