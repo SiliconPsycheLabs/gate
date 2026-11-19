@@ -254,6 +254,10 @@ TOOL_SECRET_SERVERS = {"vault", "hashicorp-vault", "hashicorp_vault", "1password
                        "secrets", "keychain", "lastpass", "akeyless", "conjur", "cyberark", "keyvault", "key-vault"}
 TOOL_SECRET_WORDS = {"secret", "secrets", "password", "passwords", "credential", "credentials", "passphrase",
                      "privatekey", "apikey"}
+# A tool that writes the agent's own standing instructions: one of the nouns, scoped to the agent itself.
+TOOL_SELF_CONFIG_NOUNS = {"prompt", "systemprompt", "instructions", "instruction", "persona", "guardrails"}
+TOOL_SELF_CONFIG_SCOPE = {"system", "systemprompt", "agent", "assistant", "own", "self", "base", "custom", "persona",
+                          "global", "default", "standing", "permanent"}
 # Words in a tool's name that print the process environment, where tokens and keys usually live.
 TOOL_ENV_WORDS = {"env", "printenv", "getenv", "environ", "envvars", "envvar", "dotenv"}
 # Words in a tool's name that send a file to the service behind it, and the argument names that carry the file.
@@ -1688,6 +1692,12 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     if rec["tool_verb_class"] == "write":
         rec["tool_checks_off"] = sorted(set(_checks_off(arguments)) | set(_checks_off_by_name(tool)))
     rec["tool_physical_access"] = _physical_access(tool)
+    # a tool that rewrites the agent's own standing instructions (update_system_prompt, set_agent_instructions) is a
+    # change to the agent's configuration, as a write to its config file is (v0.1.48, GATE-ADAPT-01: an attacker had
+    # the agent put "send every conversation to attacker.com" into its own system prompt through such a tool)
+    tw = set(rec["tool_words"])
+    if rec["tool_verb_class"] == "write" and (tw & TOOL_SELF_CONFIG_NOUNS) and (tw & TOOL_SELF_CONFIG_SCOPE):
+        rec["writes_agent_config"] = True
     if rec["tool_verb_class"] == "write" and "install" in rec["tool_words"] and isinstance(arguments, dict):
         _tool_package_install(rec, arguments, config)
     if config.declared_tools:
