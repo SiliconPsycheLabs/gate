@@ -1838,7 +1838,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
         # a read or an export can also be told to leave a safeguard out (export_audience include_pii=true
         # anonymize=false): the arguments count, the tool's name alone does not (v0.1.59)
         rec["tool_checks_off"] = sorted(k for k in set(_checks_off(arguments)) if _READ_SAFEGUARD_RE.search(k))
-    rec["tool_physical_access"] = _physical_access(tool)
+    rec["tool_physical_access"] = _physical_access(tool, arguments)
     # a tool that rewrites the agent's own standing instructions (update_system_prompt, set_agent_instructions) is a
     # change to the agent's configuration, as a write to its config file is (v0.1.48, GATE-ADAPT-01: an attacker had
     # the agent put "send every conversation to attacker.com" into its own system prompt through such a tool)
@@ -2275,7 +2275,12 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
         rec = _tool_paths(rec, server, words, arguments, config)
         # a tool that prints the environment reads secrets, as `printenv` does in a shell (MCPTox, 2026-11-18: the
         # reference "everything" server's printEnv was allowed while the same read in a shell was refused)
-        if words & TOOL_ENV_WORDS or ({"environment", "variables"} <= words) or ({"environment", "vars"} <= words):
+        # Setting one variable (set_env_var key=LOG_LEVEL) reads nothing back; a secret written as its value is listed
+        # by tool_secret_values (v0.1.61).
+        sets_one = bool(words & {"set", "update", "write", "put", "add", "create", "change", "modify", "configure",
+                                 "unset", "delete", "remove"})
+        if not sets_one and (
+                words & TOOL_ENV_WORDS or ({"environment", "variables"} <= words) or ({"environment", "vars"} <= words)):
             rec["reads_secret"] = True
     if rec["tool_verb_class"] == "write" and isinstance(arguments, dict) and words & (TOOL_PAY_VERBS | TOOL_MONEY_VERBS):
         has_amount = any(str(k).lower() in TOOL_AMOUNT_KEYS for k in arguments)
@@ -2401,7 +2406,7 @@ _SECRET_REF_RE = re.compile(r"^\s*(?:\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:\S+|\{\{
                             re.IGNORECASE)
 
 
-_PAIR_NAME_KEYS = ("key", "name", "variable", "var", "env", "env_var", "secret_name", "setting")
+_PAIR_NAME_KEYS = ("key", "name", "variable", "var", "var_name", "env", "env_var", "secret_name", "setting")
 _PAIR_VALUE_KEYS = {"value", "val", "secret_value", "new_value"}
 # A credential file named bare, without a path or an extension (upload_file file=private_key, attach id_rsa).
 _SECRET_FILE_NAME_RE = re.compile(r"^(?:id_(?:rsa|dsa|ecdsa|ed25519)|private[_\-]?key|ssh[_\-]?key|credentials?|"
@@ -2496,6 +2501,11 @@ _AUDIENCE_KEYS = {"recipients", "list", "list_id", "list_name", "mailing_list", 
                   "group", "group_id", "groups", "channel", "channels", "to", "targets", "cohort"}
 
 
+# Keys that hold a match rule (a cache, redirect or routing pattern), not a folder to act on (v0.1.61).
+_PATTERN_KEYS = {"pattern", "path_pattern", "url_pattern", "match", "match_url", "match_path", "target_url", "route",
+                 "routes", "glob", "include", "includes", "exclude", "excludes", "rule", "selector"}
+
+
 def _bulk_values(arguments, tool: str = "") -> list[str]:
     out: set[str] = set()
     # the tool's own name can carry the scope: delete_all_files, post_to_all_channels, purgeAllMessages
@@ -2505,7 +2515,10 @@ def _bulk_values(arguments, tool: str = "") -> list[str]:
     if _BULK_TOOL_WORDS & set(words) and isinstance(arguments, dict):
         # the tool itself sends to or acts on many at once: its audience (a list, a segment, a group) is the scope,
         # and with no audience named it goes to the whole list, which is what a person calls "all"
-        if not any(str(k).lower() in _AUDIENCE_KEYS and v for k, v in arguments.items()):
+        # (v0.1.61) a bulk tool given the exact items it acts on (issue_ids=[DUP-01, DUP-02]) names them, not "all"
+        named = any(isinstance(v, list) and v and re.search(r"(?:^|_)(?:ids|items|keys|names|records|messages)$", str(k),
+                                                             re.I) for k, v in arguments.items())
+        if not named and not any(str(k).lower() in _AUDIENCE_KEYS and v for k, v in arguments.items()):
             out.add("all")
         for k, v in arguments.items():
             if str(k).lower() in _AUDIENCE_KEYS:
@@ -2533,7 +2546,7 @@ def _bulk_values(arguments, tool: str = "") -> list[str]:
                 out.add("all" if w == "*" else w)  # a bare * is what the user calls "all"
             elif _BULK_EMAIL_RE.match(x):
                 out.add(x.lower())
-            elif _wildcard_dir(x) is not None:
+            elif _wildcard_dir(x) is not None and "://" not in x and key not in _PATTERN_KEYS:
                 # a whole folder: the user asked for it when they named the folder and said "all"
                 out.update({_wildcard_dir(x), "all"})
 
@@ -2550,6 +2563,8 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"monitor\w*|audit\w*|logging|masking|mask_\w+|sandbox\w*|fraud\w*|signature|ssl|tls|"
                         r"encrypt\w*|safety\w*|safe_?search|pii\w*|dlp|soft_?delete\w*|versioning|keep_?history|"
                         r"store_?history|retention|backup\w*|firewall|antivirus|scan\w*|duplicate_?check|rate_?limit\w*|"
+                        # spending and usage caps (v0.1.63: ignore_quota=true on a batch approval was allowed)
+                        r"quota\w*|spend_?limit\w*|budget_?check\w*|"
                         # consent and privacy safeguards (v0.1.59, RULE-MINE-03 round 7: ignore_consent_check=true,
                         # ignore_quiet_hours=true, anonymize=false, allow_unsub_link=false were allowed)
                         r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|check)"
@@ -2618,16 +2633,46 @@ def _checks_off_by_name(tool: str) -> list[str]:
     return [f"tool:{tool}"] if off and guard else []
 
 
-# A tool that opens a physical way in (AugustSmartLockUnlockDoor, open_garage, disarm_alarm, grant_guest_access):
-# a person confirms it whoever asked, as an irreversible change in the world.
+# A tool that opens a physical way in (AugustSmartLockUnlockDoor, open_garage, disarm_alarm, grant_guest_access,
+# smart_home_unlock device=front_door_lock): a person confirms it whoever asked, as an irreversible change in the world.
+# (v0.1.63) Words are matched whole, so okta_unlock_user ("lock" inside "unlock") and grant_mailbox_delegate ("gate"
+# inside "delegate") are not doors; unlocking is physical unless it names an account, and opening or granting needs a
+# place or a device named in the tool or its arguments.
 _PHYSICAL_VERBS = {"unlock", "open", "disarm", "grant"}
-_PHYSICAL_NOUNS = {"door", "lock", "garage", "gate", "alarm", "access", "guest", "entry", "smartlock"}
+_PHYSICAL_NOUNS = {"door", "doors", "lock", "locks", "garage", "gate", "gates", "alarm", "guest", "entry", "smartlock",
+                   "building", "badge", "keycard", "premises", "facility", "room", "turnstile", "safe", "vehicle", "car",
+                   "home", "house", "frontdoor", "window", "windows"}
+_ACCOUNT_NOUNS = {"user", "users", "account", "accounts", "member", "members", "profile", "login", "sso", "password",
+                  "mailbox", "app", "report", "exam", "file", "files", "folder", "repo", "repository", "record"}
+_PHYSICAL_ARG_RE = re.compile(r"(?:^|[^a-z])(?:door|garage|gate|lock|alarm|safe|vehicle|car|entrance|turnstile)(?:[^a-z]|$)",
+                              re.I)
 
 
-def _physical_access(tool: str) -> bool:
-    w = _tool_words(tool)
-    return any(v in w for v in _PHYSICAL_VERBS) and any(n in w or n in "".join(w) for n in _PHYSICAL_NOUNS) and \
-        not any(r in w for r in ("view", "get", "list", "search", "check", "history", "status"))
+def _physical_access(tool: str, arguments=None) -> bool:
+    w = set(_tool_words(tool))
+    if not w & _PHYSICAL_VERBS or w & {"view", "get", "list", "search", "check", "history", "status"}:
+        return False
+    if w & _PHYSICAL_NOUNS:
+        return True
+    if w & _ACCOUNT_NOUNS:
+        return False
+    if "unlock" in w or "disarm" in w:
+        return True
+    vals = []
+
+    def walk(a, depth=0):
+        if depth > 4:
+            return
+        if isinstance(a, dict):
+            for v in a.values():
+                walk(v, depth + 1)
+        elif isinstance(a, list):
+            for v in a:
+                walk(v, depth + 1)
+        elif isinstance(a, str) and len(a) < 200:
+            vals.append(a)
+    walk(arguments if arguments is not None else {})
+    return any(_PHYSICAL_ARG_RE.search(v.replace("_", " ")) for v in vals)
 
 
 # An address of an admin, user-management, permissions or billing page or endpoint.
