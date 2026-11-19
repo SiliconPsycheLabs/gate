@@ -55,3 +55,11 @@ def test_nothing_declared_nothing_marked():
 ])
 def test_root_sweep(command, sweep):
     assert rec({"type": "shell", "command": command})["sweeps_root"] is sweep, command
+
+
+def test_schema_declares_every_config_attribute():
+    """v0.1.65: every attribute Config.to_context() gives the rules is in the schema, so a rule that reads it validates
+    (v0.1.64 added off_limits_declared to the context and not to the schema)."""
+    from gate.schema import context_shape
+    attrs = context_shape()["attributes"]["config"]["attributes"]
+    assert set(Config(workspace="/app").to_context()) <= set(attrs)
