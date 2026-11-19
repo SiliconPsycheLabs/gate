@@ -13,12 +13,15 @@ from pathlib import Path
 
 from .checker import ALLOW, CONFIRM, DENY, Decision, PolicySet
 from .config import Config
+from .ledger import ChainedLog
+from .bundle import BundleError, check as check_bundle, configured_pubkey
+from .contract import clean as clean_contract, outside as contract_outside
 from .normalize import normalize
 from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
-           "packs_dir", "set_packs_dir", "PacksNotInstalled"]
-__version__ = "0.1.61"
+           "packs_dir", "set_packs_dir", "PacksNotInstalled", "set_packs_pubkey", "BundleError"]
+__version__ = "0.1.62"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
@@ -59,14 +62,43 @@ def pack_paths(names: list[str] | str, directory: str | Path | None = None) -> l
             f"rule pack files not found in {d}: {', '.join(missing)}. This package ships the engine without rules: "
             "use the hosted gate for the maintained packs, set GATE_PACKS_DIR to a directory that holds them, or "
             "load your own rules with Gate(PolicySet.from_paths([...])).")
+    _check_bundle(d)
     return paths
+
+
+_bundle_checked: dict = {}
+
+
+def set_packs_pubkey(key_b64: str | None) -> None:
+    """The Ed25519 public key (base64 of the raw 32 bytes) the packs directory's signature must match; None goes back
+    to GATE_PACKS_PUBKEY."""
+    global _packs_pubkey
+    _packs_pubkey = key_b64 or None
+    _bundle_checked.clear()
+
+
+_packs_pubkey: str | None = None
+
+
+def _check_bundle(d: Path) -> None:
+    """A packs directory with a manifest must match it; with a public key configured it must be signed (bundle.py)."""
+    key = _packs_pubkey or configured_pubkey()
+    mf = d / "manifest.json"
+    stamp = (str(d), key, mf.stat().st_mtime_ns if mf.is_file() else None,
+             tuple(sorted((p.name, p.stat().st_mtime_ns) for p in d.glob("*.cedar"))))
+    if _bundle_checked.get(str(d)) == stamp:
+        return
+    check_bundle(d, key, __version__)
+    _bundle_checked[str(d)] = stamp
 
 
 class Gate:
     def __init__(self, policies: PolicySet, config: Config | None = None, log_path: str | Path | None = None):
         self.policies = policies
         self.config = config or Config()
+        self._contract = clean_contract(self.config.contract)
         self.log_path = Path(log_path) if log_path else None
+        self._ledger = None
 
     @classmethod
     def from_pack(cls, packs: list[str] | str = "coding", config: Config | None = None,
@@ -86,6 +118,7 @@ class Gate:
         action_type = str(action.get("type", "unknown"))
         record = normalize(action, self.config)
         facts = session.facts(record)
+        facts["outside_contract"] = contract_outside(record, self._contract, session.contract_widened)
         context = {"n": record, "facts": facts, "config": self.config.to_context()}
         decision = self.policies.evaluate(action_type, agent, context, agent_attrs)
         if decision.outcome == ALLOW and (record["reads_secret"] or record["tool_reads_secret"]):
@@ -115,17 +148,16 @@ class Gate:
             session.secret_read = True
         if decision.outcome == CONFIRM:
             session.note_done(normalized)
+            session.widen(decision.record.get("facts", {}).get("outside_contract", []))
         name = str(decision.record.get("action", {}).get("name", ""))
         if decision.outcome == CONFIRM and session.tool_changed(name):
             session.repin(name)
 
     def _log(self, decision: Decision, agent: str, session_id: str) -> None:
-        line = json.dumps({"ts": time.time(), "session": session_id, "agent": agent, "outcome": decision.outcome,
-                           "rules": decision.rules, "action": decision.record["action"],
-                           "normalized": decision.record["normalized"], "facts": decision.record["facts"],
-                           "errors": decision.errors}, sort_keys=True)
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.log_path, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+        # a hash chain (gate/ledger.py): any line changed, removed or moved afterwards is found by `gate log verify`
+        if self._ledger is None or self._ledger.path != self.log_path:
+            self._ledger = ChainedLog(self.log_path)
+        self._ledger.append({"ts": time.time(), "session": session_id, "agent": agent, "outcome": decision.outcome,
+                             "rules": decision.rules, "action": decision.record["action"],
+                             "normalized": decision.record["normalized"], "facts": decision.record["facts"],
+                             "errors": decision.errors})
