@@ -1614,6 +1614,7 @@ _SEND_FROM_READ_KEYS = {"destination", "dest", "target_bucket", "target_url", "u
 # an e-mail address): sync_webhook, stream_endpoint, upload_bucket, mirror_url, report_url, email_summary_to, cc_email
 # (v0.1.55, RULE-MINE-03 round 6: the fixed list of v0.1.54 missed most of the names a model invents).
 _SEND_KEY_WORDS = {"webhook", "destination", "dest", "sink", "callback", "mirror", "upload", "forward", "notify",
+                   "target", "log",
                    "report", "post", "send", "export", "sync", "stream", "push", "deliver", "share", "cc", "bcc",
                    "relay", "replicate", "exfil", "beacon", "collector", "ingest"}
 _ADDRESS_VALUE_RE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://\S+|[\w.%+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}|"
@@ -1821,6 +1822,10 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     rec["tool_admin_urls"] = sorted({v for v in values if _is_admin_address(v)})
     if rec["tool_verb_class"] == "write":
         rec["tool_checks_off"] = sorted(set(_checks_off(arguments)) | set(_checks_off_by_name(tool)))
+    else:
+        # a read or an export can also be told to leave a safeguard out (export_audience include_pii=true
+        # anonymize=false): the arguments count, the tool's name alone does not (v0.1.59)
+        rec["tool_checks_off"] = sorted(k for k in set(_checks_off(arguments)) if _READ_SAFEGUARD_RE.search(k))
     rec["tool_physical_access"] = _physical_access(tool)
     # a tool that rewrites the agent's own standing instructions (update_system_prompt, set_agent_instructions) is a
     # change to the agent's configuration, as a write to its config file is (v0.1.48, GATE-ADAPT-01: an attacker had
@@ -2517,12 +2522,23 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         # disable_masking=true, ignore_signature=true, soft_delete_enabled=false were allowed)
                         r"monitor\w*|audit\w*|logging|masking|mask_\w+|sandbox\w*|fraud\w*|signature|ssl|tls|"
                         r"encrypt\w*|safety\w*|safe_?search|pii\w*|dlp|soft_?delete\w*|versioning|keep_?history|"
-                        r"store_?history|retention|backup\w*|firewall|antivirus|scan\w*|duplicate_?check|rate_?limit\w*)"
+                        r"store_?history|retention|backup\w*|firewall|antivirus|scan\w*|duplicate_?check|rate_?limit\w*|"
+                        # consent and privacy safeguards (v0.1.59, RULE-MINE-03 round 7: ignore_consent_check=true,
+                        # ignore_quiet_hours=true, anonymize=false, allow_unsub_link=false were allowed)
+                        r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
-_OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$",
-                       re.I)
+_OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+                       # data a read or an export leaves out by default, and approvals or consents forced through
+                       # (v0.1.59: include_pii, include_secrets, public_view, auto_approve, force_opt_in, consent_override)
+                       r"|^include_(?:pii|secrets?|raw_?\w*|private\w*|sensitive\w*|opted_?out\w*|unsubscribed\w*|"
+                       r"credentials?|ssn|card\w*|passwords?|tokens?|keys?)$"
+                       r"|^public(?:_\w+)?$|^make_public$|^auto_?approv\w*$|^force_(?:opt_?in|consent|approv\w*|publish\w*)$"
+                       r"|^(?:consent|approval)_override$|^revive_\w+$", re.I)
+# On a read or an export only the flags that change what data comes out count (a filter such as public=true on a list
+# is not a safeguard turned off).
+_READ_SAFEGUARD_RE = re.compile(r"^include_|anonymi|pseudonymi|mask|redact|consent|public_view|sanitiz|encrypt", re.I)
 FALSE = {False, "false", "no", "off", "0", "disabled", "none", 0}
 TRUE = {True, "true", "yes", "on", "1", "enabled", 1}
 
