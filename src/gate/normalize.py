@@ -1600,6 +1600,28 @@ def _tool_parts(name: str) -> tuple[str, str]:
     return "", name
 
 
+# Argument names that send what a call produces somewhere else: a read-named tool given one of these is a send
+# (export_customers destination=https://..., check_backup_status target_bucket=s3://...) (v0.1.54, RULE-MINE-03 round 5).
+_SEND_FROM_READ_KEYS = {"destination", "dest", "target_bucket", "target_url", "upload_url", "upload_to", "webhook",
+                        "webhook_url", "callback_url", "callback", "send_to", "forward_to", "export_to", "output_url",
+                        "post_to", "notify_url", "console_url", "remote_url", "sink", "sink_url", "deliver_to",
+                        "report_to", "mirror_to", "copy_to", "share_with"}
+
+
+def _sends_from_read(arguments, depth: int = 0) -> bool:
+    if depth > 6:
+        return False
+    if isinstance(arguments, dict):
+        for k, v in arguments.items():
+            if str(k).lower().replace("-", "_") in _SEND_FROM_READ_KEYS and isinstance(v, (str, list)) and v:
+                return True
+            if isinstance(v, (dict, list)) and _sends_from_read(v, depth + 1):
+                return True
+    elif isinstance(arguments, list):
+        return any(_sends_from_read(v, depth + 1) for v in arguments)
+    return False
+
+
 def _tool_verb_class(tool: str) -> str:
     parts = [w.lower() for w in re.split(r"[_\-.]|(?<=[a-z])(?=[A-Z])", tool) if w] if tool else []
     first = parts[0] if parts else ""
@@ -1751,6 +1773,8 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     rec["tool_name"] = name
     rec["tool_server"] = server
     rec["tool_verb_class"] = _tool_verb_class(tool)
+    if rec["tool_verb_class"] == "read" and _sends_from_read(arguments):
+        rec["tool_verb_class"] = "write"
     rec["tool_words"] = sorted({w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", tool) if w})
     targets: list[str] = []
     _tool_targets(arguments if arguments is not None else {}, targets)
@@ -1802,7 +1826,72 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
         new = next((str(arguments[k]) for k in ("new_string", "content", "file_text", "new_str", "code_edit")
                     if arguments.get(k)), "")
         rec["writes_test_weakening"] = weakens_test(fpath, new)
+        deps = _manifest_dependencies(fpath, new) if rec["tool_verb_class"] == "write" else []
+        if deps:
+            # a dependency written into a manifest is installed by the next build: the same package rules as an
+            # install (v0.1.54, RULE-MINE-03 round 5: requirements.txt, go.mod and package.json writes naming a
+            # package planted in data were allowed)
+            rec["packages"] = sorted(set(rec.get("packages", [])) | set(deps))
+            rec["package_install"] = True
+        if Path(fpath).name.lower() == ".gitmodules":
+            rec["writes_git_internals"] = True   # a submodule URL is fetched and its checkout runs on the next update
+    if tw >= {"git", "config"} and isinstance(arguments, dict):
+        key = next((str(arguments[k]) for k in ("key", "name", "setting", "option") if arguments.get(k)), "")
+        if key and GIT_EXEC_KEYS_RE.match(key.lower()):
+            rec["writes_git_internals"] = True
     return _tool_reach(rec, server, words, arguments, config)
+
+
+_MANIFEST_REQ_RE = re.compile(r"^(?:requirements[\w.-]*|constraints[\w.-]*)\.(?:txt|in)$", re.I)
+_REQ_LINE_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)(?:\[[^\]]*\])?\s*(?:[<>=!~;@ ]|$)")
+
+
+def _manifest_dependencies(path: str, text: str) -> list[str]:
+    """Package names a write puts into a dependency manifest (requirements.txt, package.json, pyproject.toml, go.mod,
+    Cargo.toml, Gemfile, Pipfile)."""
+    name = Path(path).name.lower() if path else ""
+    if not name or not text:
+        return []
+    out: list[str] = []
+    if _MANIFEST_REQ_RE.match(name):
+        for line in text.splitlines():
+            line = line.split("#", 1)[0]
+            m = _REQ_LINE_RE.match(line)
+            if m and not line.strip().startswith("-"):
+                out.append(m.group(1))
+    elif name == "package.json":
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            doc = None
+        if isinstance(doc, dict):
+            for sec in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
+                if isinstance(doc.get(sec), dict):
+                    out.extend(str(k) for k in doc[sec])
+        else:   # an edit fragment: "name": "version" pairs
+            out.extend(re.findall(r'"(@?[a-z0-9][\w.-]*(?:/[\w.-]+)?)"\s*:\s*"[\^~<>=*\dvlatest]', text))
+    elif name == "go.mod":
+        for m in re.finditer(r"^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]{2,}/[\w./-]+)\s+v\d", text, re.M):
+            out.append(m.group(1))
+    elif name in ("cargo.toml", "pipfile"):
+        section = ""
+        for line in text.splitlines():
+            st = line.strip()
+            if st.startswith("["):
+                section = st.lower()
+                continue
+            m = re.match(r"^([A-Za-z0-9][A-Za-z0-9_-]*)\s*=", st)
+            if m and ("dependencies" in section or section in ("[packages]", "[dev-packages]")):
+                out.append(m.group(1))
+    elif name == "gemfile":
+        out.extend(re.findall(r"^\s*gem\s+['\"]([\w.-]+)['\"]", text, re.M))
+    elif name == "pyproject.toml":
+        for block in re.findall(r"dependencies\s*=\s*\[(.*?)\]", text, re.S):
+            for spec in re.findall(r"['\"]([^'\"]+)['\"]", block):
+                m = _REQ_LINE_RE.match(spec)
+                if m:
+                    out.append(m.group(1))
+    return sorted({d for d in out if 2 <= len(d) <= 200})
 
 
 def _tool_shell_command(words: set[str], arguments) -> tuple[str, str | None] | None:
@@ -2226,10 +2315,14 @@ _SECRET_SHAPE_RE = re.compile(
     r"(?i:(?:^|[;\s])(?:password|pwd)\s*=\s*)(?P<kv>[^;\s'\"]{3,})|"
     # NAME_PASSWORD=..., API_TOKEN: ..., in free text (a message body that carries a credential)
     r"(?i:(?:^|[;\s,])[A-Za-z0-9]+_(?:password|passwd|pwd|secret|token|api_?key|access_?key)\s*[=:]\s*)(?P<kv2>[^;\s,'\"$<{]{6,})|"
-    r"https://hooks\.slack\.com/services/\S+")
+    r"https://hooks\.slack\.com/services/\S+|"
+    r"\bssh-(?:rsa|ed25519|dss) AAAA[0-9A-Za-z+/=.]{3,}|"
+    # a payment card number (13 to 19 digits, spaces or dashes between groups), kept only when its Luhn sum holds
+    r"(?P<card>\b(?:\d[ -]?){12,18}\d\b)")
 _SECRET_KEY_RE = re.compile(
     r"(?:^|_)(?:password|passwd|pwd|secret|token|api_?key|apikey|access_?key|private_?key|client_?secret|"
-    r"credentials?|authorization|auth_?token|bearer)(?:$|_)|^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
+    r"credentials?|authorization|auth_?token|bearer|passphrase|session_?cookie|cookie|encryption_?key|signing_?key|"
+    r"auth_?header|card_?number|cvv|cvc)(?:$|_)|^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
 _SECRET_REF_RE = re.compile(r"^\s*(?:\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:\S+|\{\{.*\}\}|<[^>]*>|\*+|x+|redacted)\s*$",
                             re.IGNORECASE)
 
@@ -2263,6 +2356,18 @@ def _secret_files(arguments) -> list[str]:
     return sorted(out)
 
 
+def _luhn(number: str) -> bool:
+    digits = [int(c) for c in number if c.isdigit()]
+    if not 13 <= len(digits) <= 19 or len(set(digits)) == 1:
+        return False
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2:
+            d = d * 2 - 9 if d > 4 else d * 2
+        total += d
+    return total % 10 == 0
+
+
 def _secret_values(arguments) -> list[str]:
     out: set[str] = set()
 
@@ -2283,6 +2388,8 @@ def _secret_values(arguments) -> list[str]:
             if not x or len(x) > 4000 or _SECRET_REF_RE.match(x):
                 return
             m = _SECRET_SHAPE_RE.search(x)
+            while m and m.group("card") and not _luhn(m.group("card")):
+                m = _SECRET_SHAPE_RE.search(x, m.end())
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
                 out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group(0))
@@ -2356,8 +2463,17 @@ def _bulk_values(arguments, tool: str = "") -> list[str]:
 # A check turned off inside a write call's arguments (IPI Arena hotel-frontdesk: guest_checkout with
 # id_verification false), whoever asked: a person confirms that a safeguard is skipped.
 _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa|2fa|two_?factor|otp|signature_?check|"
-                        r"id_?check|identity_?check|auth(?:entication)?_?required|require_\w+|check_\w+)(?:$|_)", re.I)
-_OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without)_\w+$", re.I)
+                        r"id_?check|identity_?check|auth(?:entication)?_?required|require_\w+|check_\w+|"
+                        # safeguards named by what they protect (v0.1.54, RULE-MINE-03 round 5: monitoring=false,
+                        # disable_masking=true, ignore_signature=true, soft_delete_enabled=false were allowed)
+                        r"monitor\w*|audit\w*|logging|masking|mask_\w+|sandbox\w*|fraud\w*|signature|ssl|tls|"
+                        r"encrypt\w*|safety\w*|safe_?search|pii\w*|dlp|soft_?delete\w*|versioning|keep_?history|"
+                        r"store_?history|retention|backup\w*|firewall|antivirus|scan\w*|duplicate_?check|rate_?limit\w*)"
+                        r"(?:$|_)", re.I)
+_OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
+# A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
+_OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$",
+                       re.I)
 FALSE = {False, "false", "no", "off", "0", "disabled", "none", 0}
 TRUE = {True, "true", "yes", "on", "1", "enabled", 1}
 
@@ -2381,6 +2497,8 @@ def _checks_off(arguments, depth=0, out=None):
                 if _CHECK_KEY.search(k2) and not _OFF_KEY.match(k2) and vv in FALSE:
                     out.append(k2)
                 elif _OFF_KEY.match(k2) and _CHECK_KEY.search(k2.split("_", 1)[1]) and vv in TRUE:
+                    out.append(k2)
+                elif _OPEN_KEY.match(k2) and vv in TRUE:
                     out.append(k2)
             _checks_off(v, depth + 1, out)
     elif isinstance(arguments, list):
