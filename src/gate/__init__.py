@@ -18,7 +18,7 @@ from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
            "packs_dir", "set_packs_dir", "PacksNotInstalled"]
-__version__ = "0.1.60"
+__version__ = "0.1.61"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
@@ -100,6 +100,13 @@ class Gate:
         if self.log_path:
             self._log(decision, agent, session_id)
         return decision
+
+    def check_plan(self, plan: dict, session: Session | None = None, agent: str = "agent"):
+        """Decide a compound shell line or a list of actions step by step (gate.plan, PSA #7814): which steps can
+        run, which wait for a person, which are refused, and which are blocked because they need a step that did not
+        pass. The session is not changed; send each step that runs through check() as usual."""
+        from .plan import check_plan
+        return check_plan(self, plan, session=session, agent=agent)
 
     def approve(self, decision: Decision, session: Session) -> None:
         """Record that a person approved a held action (it will be executed by the caller)."""

@@ -313,6 +313,7 @@ TOOL_LOOKUP_WORDS = {"report", "reputation", "whois", "intel", "lookup", "breach
                      "verdict", "score", "rating", "enrich", "enrichment", "geolocate", "geo"}
 IDENTITY_PATHS = {"/etc/passwd", "/etc/group", "/etc/gshadow", "/root", "/home"}
 IDENTITY_DIRS = ("/root", "/etc/ssh")
+SUDO_INERT_COMMANDS = {"cd", "pushd", "popd", "echo", "true", "false", "pwd", ":", "printf"}
 # Substitutions whose inner command only reports a fact about the machine or the repository.
 SAFE_SUBST_COMMANDS = {"which", "pwd", "date", "whoami", "hostname", "nproc", "uname", "id", "basename", "dirname",
                        "realpath", "readlink", "mktemp"}
@@ -587,9 +588,13 @@ class _Ctx:
             quiet = not (r["writes"] or r["deletes"] or r["network"] or r["package_install"] or r["eval_like"]
                          or r["security_change"] or r["git_push"] or r["git_discard"] or r["pipe_into_shell"]
                          or r["reads_secret"] or r["reads_identity"] or r["substitution"] or r["variables"])
+            # commands that change nothing (cd, echo without a redirect, true) beside the status tools do not make the
+            # line more than a look (v0.1.61, GATE-PLAN-01: `cd /srv && sudo cat /var/log/x.log` was held while each
+            # part alone passed)
+            looked = set(r["commands"]) - SUDO_INERT_COMMANDS
             r["sudo_read_status"] = bool(
-                quiet and r["service_verb_class"] in ("none", "read") and r["commands"]
-                and set(r["commands"]) <= SUDO_STATUS_COMMANDS
+                quiet and r["service_verb_class"] in ("none", "read") and looked
+                and looked <= SUDO_STATUS_COMMANDS
                 and all(_in_dir(p, ["/var/log"]) for p in r["reads"]))
         return r
 
@@ -1002,8 +1007,9 @@ def _analyze_git(args: list[str], ctx: _Ctx):
             non_flags = [a for a in opts if not a.startswith("-")]
             if len(non_flags) >= 2:
                 ctx._writes.append(ctx.resolve(non_flags[1]))
-        if sub in ("fetch", "pull", "push") and not ctx._hosts:
-            # host comes from the configured remote
+        if sub in ("fetch", "pull", "push", "ls-remote") and not ctx._hosts:
+            # host comes from the configured remote (ls-remote too, v0.1.61: GATE-PLAN-01 found `git ls-remote origin`
+            # read as a contact with an unknown host while `git fetch origin` reached the configured remote)
             for h in ctx.config.git_remotes:
                 ctx.add_host(h)
     if sub == "push":
@@ -1080,7 +1086,13 @@ def _analyze_package(cmd: str, args: list[str], ctx: _Ctx):
         return
     pkgs_raw = rest if cmd == "npx" else rest[1:]
     r["package_install"] = True
-    r["package_manager"] = manager
+    # a system package manager anywhere in the line keeps the line a system install, whatever comes after it, and its
+    # mirrors are hosts the owner did not list (v0.1.61, GATE-PLAN-01: `apt install -y x && pip install -e .` read as a
+    # pip install only)
+    if r.get("package_manager") != "system":
+        r["package_manager"] = manager
+    if manager == "system":
+        r["network_host_unknown"] = True
     r["network"] = True
     registries = list(ctx.config.registries.get(manager, []))
     skip_next = False
