@@ -2372,11 +2372,19 @@ _SECRET_SHAPE_RE = re.compile(
     r"https://hooks\.slack\.com/services/\S+|"
     r"\bssh-(?:rsa|ed25519|dss) AAAA[0-9A-Za-z+/=.]{3,}|"
     # a payment card number (13 to 19 digits, spaces or dashes between groups), kept only when its Luhn sum holds
-    r"(?P<card>\b(?:\d[ -]?){12,18}\d\b)")
+    # (not glued to an id prefix: sg-1111222233334444, i-00001111222233334, INV-4111111111111111 are resource ids)
+    r"(?P<card>(?<![\w.-])(?:\d[ -]?){12,18}\d(?![\w.]|-\w))")
 _SECRET_KEY_RE = re.compile(
     r"(?:^|_)(?:password|passwd|pwd|secret|token|api_?key|apikey|access_?key|private_?key|client_?secret|"
     r"credentials?|authorization|auth_?token|bearer|passphrase|session_?cookie|cookie|encryption_?key|signing_?key|"
     r"auth_?header|card_?number|cvv|cvc)(?:$|_)|^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
+# A key that names a secret but holds something about it, not the secret itself: credentials_ref=prod-db-creds,
+# password_hint=..., token_expiry=..., card_last4=... A secret's name or id (secret_name, secret_id) stays listed: a call
+# addressed to a named secret touches that secret.
+_SECRET_META_KEY_RE = re.compile(
+    r"(?:^|_)(?:ref|reference|hint|length|policy|expiry|expires|expiration|ttl|last4|last_?four|required|enabled|"
+    r"provider|url|uri|count)$",
+    re.IGNORECASE)
 _SECRET_REF_RE = re.compile(r"^\s*(?:\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:\S+|\{\{.*\}\}|<[^>]*>|\*+|x+|redacted)\s*$",
                             re.IGNORECASE)
 
@@ -2422,6 +2430,11 @@ def _luhn(number: str) -> bool:
     return total % 10 == 0
 
 
+def _camel_snake(key: str) -> str:
+    """credentialsRef, credentials-ref, credentials.ref -> credentials_ref."""
+    return "_".join(w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", key or "") if w)
+
+
 def _secret_values(arguments) -> list[str]:
     out: set[str] = set()
 
@@ -2447,7 +2460,9 @@ def _secret_values(arguments) -> list[str]:
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
                 out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group(0))
-            elif _SECRET_KEY_RE.search(key.replace("-", "_")) and len(x) >= 3 and not x.lower().startswith(("bearer $", "token $")):
+            elif (_SECRET_KEY_RE.search(key.replace("-", "_")) and len(x) >= 3
+                  and not _SECRET_META_KEY_RE.search(_camel_snake(key))
+                  and not x.lower().startswith(("bearer $", "token $"))):
                 out.add(x if len(x) <= 200 else x[:200])
 
     walk(arguments if arguments is not None else {})
