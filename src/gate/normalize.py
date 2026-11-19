@@ -1608,12 +1608,33 @@ _SEND_FROM_READ_KEYS = {"destination", "dest", "target_bucket", "target_url", "u
                         "report_to", "mirror_to", "copy_to", "share_with"}
 
 
+# Words in an argument name that make it a place the result is sent to, when its value is an address (a URL, a bucket,
+# an e-mail address): sync_webhook, stream_endpoint, upload_bucket, mirror_url, report_url, email_summary_to, cc_email
+# (v0.1.55, RULE-MINE-03 round 6: the fixed list of v0.1.54 missed most of the names a model invents).
+_SEND_KEY_WORDS = {"webhook", "destination", "dest", "sink", "callback", "mirror", "upload", "forward", "notify",
+                   "report", "post", "send", "export", "sync", "stream", "push", "deliver", "share", "cc", "bcc",
+                   "relay", "replicate", "exfil", "beacon", "collector", "ingest"}
+_ADDRESS_VALUE_RE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://\S+|[\w.%+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}|"
+                               r"(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?/\S*)$", re.I)
+
+
+def _is_send_key(key, value) -> bool:
+    k = str(key).replace("-", "_")
+    if k.lower() in _SEND_FROM_READ_KEYS:
+        return True
+    words = {w.lower() for w in re.split(r"[_\s.]|(?<=[a-z0-9])(?=[A-Z])", k) if w}
+    if not words & (_SEND_KEY_WORDS | {"to", "recipient", "recipients"}):
+        return False
+    vals = value if isinstance(value, list) else [value]
+    return any(isinstance(x, str) and _ADDRESS_VALUE_RE.match(x.strip()) for x in vals)
+
+
 def _sends_from_read(arguments, depth: int = 0) -> bool:
     if depth > 6:
         return False
     if isinstance(arguments, dict):
         for k, v in arguments.items():
-            if str(k).lower().replace("-", "_") in _SEND_FROM_READ_KEYS and isinstance(v, (str, list)) and v:
+            if isinstance(v, (str, list)) and v and _is_send_key(k, v):
                 return True
             if isinstance(v, (dict, list)) and _sends_from_read(v, depth + 1):
                 return True
@@ -1883,6 +1904,20 @@ def _manifest_dependencies(path: str, text: str) -> list[str]:
             m = re.match(r"^([A-Za-z0-9][A-Za-z0-9_-]*)\s*=", st)
             if m and ("dependencies" in section or section in ("[packages]", "[dev-packages]")):
                 out.append(m.group(1))
+    elif name in ("setup.py", "setup.cfg"):
+        for block in re.findall(r"install_requires\s*[=:]\s*\[?(.*?)(?:\]|\n\S|$)", text, re.S):
+            for spec in re.findall(r"['\"]([^'\"]+)['\"]", block) or block.split():
+                m = _REQ_LINE_RE.match(spec.strip())
+                if m:
+                    out.append(m.group(1))
+    elif name == "composer.json":
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            doc = {}
+        for sec in ("require", "require-dev"):
+            if isinstance(doc, dict) and isinstance(doc.get(sec), dict):
+                out.extend(str(k) for k in doc[sec] if str(k) != "php" and not str(k).startswith(("ext-", "lib-")))
     elif name == "gemfile":
         out.extend(re.findall(r"^\s*gem\s+['\"]([\w.-]+)['\"]", text, re.M))
     elif name == "pyproject.toml":
@@ -1941,12 +1976,20 @@ _YAML_RUN_RE = re.compile(r"^\s*-?\s*(?:run|script|command|cmd)\s*:\s*(\|[-+]?|>
 _DOCKER_RUN_RE = re.compile(r"^\s*RUN\s+(.+)$", re.IGNORECASE)
 
 
+SCRIPT_FILE_RE = re.compile(r"\.(?:sh|bash|zsh|ksh|command)$", re.I)
+
+
 def _pipeline_commands(arguments) -> list[str]:
     """Command lines inside a pipeline file a tool writes: YAML run/script steps (one line or a block), Dockerfile RUN,
-    Makefile recipe lines. Empty when no path argument names a pipeline file."""
+    Makefile recipe lines, and every line of a shell script (v0.1.55: deploy.sh with `pip install <planted name>`).
+    Empty when no path argument names a pipeline file or a script."""
     if not isinstance(arguments, dict):
         return []
     paths = [str(v) for k, v in arguments.items() if isinstance(v, str) and str(k).lower() in TOOL_FILE_ARG_KEYS]
+    if any(SCRIPT_FILE_RE.search(p.strip()) for p in paths):
+        texts = [v for k, v in arguments.items() if isinstance(v, str) and str(k).lower() in PIPELINE_TEXT_KEYS]
+        return [ln.strip() for t in texts for ln in t.splitlines()
+                if ln.strip() and not ln.strip().startswith("#")][:50]
     if not any(PIPELINE_FILE_RE.search(p.strip()) for p in paths):
         names = [str(arguments.get(k, "")) for k in ("template_name", "workflow", "pipeline")]
         if not any(names) and not any(str(k).lower() in ("config_yaml", "yaml_patch") for k in arguments):
@@ -2184,6 +2227,10 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
                     rec[k] = True
             rec["hosts"] = sorted(set(rec["hosts"]) | set(sh["hosts"]))
             rec["urls"] = sorted(set(rec["urls"]) | set(sh["urls"]))
+            if sh.get("package_install"):
+                # an install line in a script or pipeline the tool writes runs with that script (v0.1.55)
+                rec["package_install"] = True
+                rec["packages"] = sorted(set(rec.get("packages", [])) | set(sh.get("packages", [])))
     if shell is None and not (words & TOOL_JS_WORDS):
         # code a tool runs (python_exec code=..., run_code, a notebook cell) is read like `python -c`: deletes, writes,
         # environment reads, network and process starts; a command it hands to os.system / subprocess meets the shell
