@@ -37,6 +37,16 @@ and the record says, for each action, which classes it touches, whether a target
 outside its range. The session remembers a bank-detail change (so a payment after it can be refused) and how many
 writes each machine received.
 
+## Plans read step by step (v0.1.61)
+
+`gate.check_plan(plan, session)` reads a compound shell line (`a && b ; c || d`, several lines) or a list of actions
+(`{"type": "plan", "steps": [...], "edges": [[from, to], ...]}`, the tool calls of one model turn) as a graph. Each step
+is decided by the same rules, in order, in a copy of the session; `a && b` and `a || b` make b need a, and a file an
+earlier step writes that a later step reads, runs or deletes is a data edge. A step that needs a step that did not pass
+is `blocked` and never offered on its own; when a shell line as a whole does not pass and no single step shows why, no
+step is offered. The answer lists the steps that can run, the ones held, refused and blocked, with one reply line per
+step. The session is not changed: send each step that runs through `check()` as usual.
+
 ## Why deterministic
 
 You cannot tell from text alone whether an action is the one you wanted: a planted instruction and a real request

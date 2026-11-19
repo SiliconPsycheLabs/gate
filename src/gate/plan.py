@@ -130,24 +130,17 @@ def _words(text: str) -> list[str]:
 
 # ---------------------------------------------------------------------------------------------------- the check
 
-def _context_prefix(steps: list[Step], upto: int, cwd: str | None, config=None) -> tuple[str | None, list[str]]:
-    """The working directory and the variable assignments the steps before `upto` leave for it."""
-    assigns: list[str] = []
+def _context_prefix(steps: list[Step], upto: int) -> list[str]:
+    """The `cd` and variable assignments of the passed steps before `upto`, in order. They are put in front of the
+    step, so the step is read with the working directory and variables the line gives it, exactly as the single-action
+    reading resolves them (`cd ~` included)."""
+    out: list[str] = []
     for s in steps[:upto]:
         if s.action.get("type") != "shell" or s.outcome in (DENY, CONFIRM, BLOCKED):
             continue
-        m = _CD_RE.match(s.text)
-        if m:
-            target = m.group(1) or "~"
-            if "$" not in target and "`" not in target:
-                if target == "~" or target.startswith("~/"):
-                    # the agent's home, as the single-action reading resolves `cd ~` (not the gate's own home)
-                    target = config.expand_home(target) if config is not None else target
-                base = Path(cwd) if cwd else None
-                cwd = str((base / target) if base is not None and not target.startswith("/") else Path(target))
-        elif _ASSIGN_RE.match(s.text):
-            assigns.append(s.text.strip())
-    return cwd, assigns
+        if _CD_RE.match(s.text) or _ASSIGN_RE.match(s.text):
+            out.append(s.text.strip())
+    return out
 
 
 def check_plan(gate, plan: dict, session=None, agent: str = "agent") -> PlanDecision:
@@ -178,10 +171,14 @@ def check_plan(gate, plan: dict, session=None, agent: str = "agent") -> PlanDeci
     for s in steps:
         cwd = base_cwd
         if s.action.get("type") == "shell":
-            cwd, assigns = _context_prefix(steps, s.index, base_cwd, gate.config)
-            s.action["cwd"] = cwd
-            if assigns and not _ASSIGN_RE.match(s.text):
-                s.action["command"] = " && ".join(assigns + [s.text])
+            s.action["cwd"] = base_cwd
+            prefix = _context_prefix(steps, s.index)
+            if prefix:
+                s.action["command"] = " && ".join(prefix + [s.text])
+                for c in prefix:                        # where a script run by its path is found
+                    m = _CD_RE.match(c)
+                    if m and m.group(1) and not m.group(1).startswith(("~", "$")):
+                        cwd = str(Path(cwd) / m.group(1)) if not m.group(1).startswith("/") else m.group(1)
         rec = normalize(s.action, gate.config)
         for p in sorted(_used_paths(s, rec, cwd)):
             src = written.get(p)

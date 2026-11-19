@@ -38,7 +38,8 @@ def test_a_file_written_by_a_held_step_blocks_the_step_that_runs_it():
 
 def test_cd_carries_to_later_steps():
     d = g().check_plan({"type": "shell", "command": "cd sub && echo a > f.txt", "cwd": "/work"})
-    assert d.steps[1].action["cwd"] == "/work/sub"
+    assert d.steps[1].action["command"] == "cd sub && echo a > f.txt"
+    assert d.steps[1].normalized["writes"] == ["/work/sub/f.txt"]
 
 
 def test_a_list_of_actions_with_given_edges():
@@ -78,9 +79,9 @@ def test_v061_engine_fixes_found_by_the_plan_reading():
 def test_a_rule_on_the_whole_line_keeps_every_step_together():
     rules = PolicySet("""
 @id("all") permit (principal, action, resource);
-@id("long-line") @outcome("confirm") forbid (principal, action, resource) when { context.n.commands.contains("cd") && context.n.commands.contains("ls") };
+@id("long-line") @outcome("confirm") forbid (principal, action, resource) when { context.n.commands.contains("make") && context.n.commands.contains("ls") };
 """)
-    d = Gate(rules, Config(workspace="/work")).check_plan({"type": "shell", "command": "cd sub && ls"})
+    d = Gate(rules, Config(workspace="/work")).check_plan({"type": "shell", "command": "make && ls"})
     assert d.whole_outcome == "confirm" and d.runnable == [] and d.outcome == "confirm"
 
 
@@ -92,5 +93,5 @@ def test_git_ls_remote_reaches_the_configured_remote():
 
 def test_cd_home_is_the_agents_home():
     gate = Gate(RULES, Config(workspace="/work", home="/home/agent"))
-    d = gate.check_plan({"type": "shell", "command": "cd ~/proj; ls"})
-    assert d.steps[1].action["cwd"] == "/home/agent/proj"
+    d = gate.check_plan({"type": "shell", "command": "cd ~/proj; cat notes.txt"})
+    assert d.steps[1].normalized["reads"] == ["/home/agent/proj/notes.txt"]
