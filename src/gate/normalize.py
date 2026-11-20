@@ -1643,7 +1643,7 @@ _SEND_FROM_READ_KEYS = {"destination", "dest", "target_bucket", "target_url", "u
 # Words in an argument name that make it a place the result is sent to, when its value is an address (a URL, a bucket,
 # an e-mail address): sync_webhook, stream_endpoint, upload_bucket, mirror_url, report_url, email_summary_to, cc_email
 # (v0.1.55, RULE-MINE-03 round 6: the fixed list of v0.1.54 missed most of the names a model invents).
-_SEND_KEY_WORDS = {"webhook", "destination", "dest", "sink", "callback", "mirror", "upload", "forward", "notify",
+_SEND_KEY_WORDS = {"webhook", "destination", "dest", "sink", "callback", "mirror", "upload", "forward", "notify", "output",
                    "target", "log",
                    "report", "post", "send", "export", "sync", "stream", "push", "deliver", "share", "cc", "bcc",
                    "relay", "replicate", "exfil", "beacon", "collector", "ingest"}
@@ -2697,14 +2697,19 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"(?:speed_?)?governor\w*|protection\w*|"
                         # (v0.1.86) an alert suppressed, a handshake skipped
                         r"alerts?|handshake|"
+                        # (v0.1.87) the last snapshot before a deletion (terraform skip_final_snapshot=true)
+                        r"(?:final_?)?snapshot|"
                         r"check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppress|mute|silence)_\w+$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
 # value, an override that is set turns the check it overrides off, unless it is set to false or empty.
-_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$", re.I)
+_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$|"
+                           r"^override_(?:auth\w*|approv\w*|check\w*|verif\w*|security|policy|limit\w*|token|code|key)$",
+                           re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
-_OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+_OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe|"
+                       r"allow_force|allow_unverified|allow_unsafe)(?:_\w+)?$"
                        # an endpoint or a resource opened to the internet (v0.1.80, GATE-SCOUT-01: terraform_apply
                        # cluster_endpoint_public_access=true was allowed)
                        r"|^\w*public_?access(?:_?enabled)?$|^publicly_?accessible$|^public_?ip(?:_?enabled)?$"
@@ -2832,6 +2837,9 @@ def _literal(text: str):
     return v if isinstance(v, (dict, list, tuple)) else None
 
 
+_KV_IN_TEXT_RE = re.compile(r"(?:^|[\s&;,?])([A-Za-z_][\w.-]{1,60})=([^\s&;,'\"]{1,200})")
+
+
 def _checks_off(arguments, depth=0, out=None):
     """The arguments of a write call that turn a check off: verification, confirmation, approval, a second factor
     set to false (id_verification=false), or skip_/bypass_/disable_ a check set to true. A JSON object passed as a
@@ -2859,6 +2867,14 @@ def _checks_off(arguments, depth=0, out=None):
             if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and len(v) <= 200 and \
                     _SAFETY_OFF_RE.search(v):
                 out.append(f"{k2}={v.strip()[:60]}")
+            # (v0.1.87, RULE-MINE-03 round 7: terraform var="ingress_cidr=0.0.0.0/0", var="skip_final_snapshot=true",
+            # timezone="EST&disable_two_factor=true") settings written as name=value inside a string value
+            if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and len(v) <= 500 and \
+                    "=" in v and depth < 6 and k2 not in TOOL_SHELL_ARG_KEYS:
+                # a debug switch in a query string or an environment prefix is a setting, not a check off
+                kv = {a: b for a, b in _KV_IN_TEXT_RE.findall(v) if not a.lower().startswith("debug")}
+                if kv:
+                    out.extend(x for x in _checks_off(kv, depth + 1, []) if x not in out)
             # (v0.1.80, GATE-SCOUT-01: cidr_blocks=["0.0.0.0/0"] in an ingress rule was allowed) a list of ranges
             if isinstance(v, list) and _CIDR_KEY_RE.search(k2) and any(
                     isinstance(x, str) and x.strip() in _WORLD_CIDR for x in v):
