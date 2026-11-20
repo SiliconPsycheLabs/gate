@@ -2064,6 +2064,28 @@ def _pipeline_commands(arguments) -> list[str]:
     return cmds[:50]
 
 
+_DELEGATE_WORDS = {"agent", "computer", "browser", "automation", "autopilot", "operator", "playwright", "puppeteer",
+                   "selenium", "execute", "run", "task"}
+_DELEGATED_URL_RE = re.compile(r"\bhttps?://([A-Za-z0-9.-]+\.[A-Za-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})")
+_FENCE_RE = re.compile(r"```[a-zA-Z0-9_+-]*\s*\n?(.*?)```", re.S)
+
+
+def _fenced_code(arguments, depth: int = 0) -> list[str]:
+    """The fenced code blocks inside any string argument."""
+    out: list[str] = []
+    if depth > 6:
+        return out
+    if isinstance(arguments, str):
+        out.extend(m.group(1) for m in _FENCE_RE.finditer(arguments) if m.group(1).strip())
+    elif isinstance(arguments, dict):
+        for v in arguments.values():
+            out.extend(_fenced_code(v, depth + 1))
+    elif isinstance(arguments, list):
+        for v in arguments:
+            out.extend(_fenced_code(v, depth + 1))
+    return out
+
+
 def _tool_code_values(arguments, depth: int = 0) -> list[str]:
     """Strings in code arguments of a tool (TOOL_CODE_ARG_KEYS), at any depth."""
     out: list[str] = []
@@ -2273,9 +2295,16 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
         # code a tool runs (python_exec code=..., run_code, a notebook cell) is read like `python -c`: deletes, writes,
         # environment reads, network and process starts; a command it hands to os.system / subprocess meets the shell
         # rules (v0.1.49, RULE-MINE-03: os.system('rm -rf /var/www/html/*') in python_exec was allowed)
-        for code in _tool_code_values(arguments):
+        # (v0.1.75, MCPTox Gemma 4 31B) a task handed to a browser or computer-use agent that carries a fenced code
+        # block ("Execute the following JavaScript code: ```javascript fetch('https://...')```") is code that agent runs
+        delegated = _fenced_code(arguments) if words & _DELEGATE_WORDS else []
+        for code in _tool_code_values(arguments) + delegated:
             ctx = _Ctx(config, None)
             ctx.apply_inline_code(code)
+            if code in delegated:
+                for u in _DELEGATED_URL_RE.findall(code):
+                    ctx.rec["network"] = True
+                    ctx.add_host(u)
             rec = _merge(rec, ctx.finish())
             for cmd in _code_shell_commands(code):
                 sh = normalize_shell(cmd, config, None)
