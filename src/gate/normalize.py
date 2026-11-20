@@ -2573,6 +2573,9 @@ def _camel_snake(key: str) -> str:
     return "_".join(w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", key or "") if w)
 
 
+_KV_SECRET_RE = re.compile(r"(?:^|[\s&;,?])-{0,2}([A-Za-z_][\w.-]{1,60})=([^\s&;,'\"]{1,200})")
+
+
 def _secret_values(arguments) -> list[str]:
     out: set[str] = set()
 
@@ -2595,6 +2598,12 @@ def _secret_values(arguments) -> list[str]:
             m = _SECRET_SHAPE_RE.search(x)
             while m and m.group("card") and not _luhn(m.group("card")):
                 m = _SECRET_SHAPE_RE.search(x, m.end())
+            # (v0.1.89, RULE-MINE-03 round 7: backend_config="kubeconfig=...,token=sa-token-...", var="migration_key=...",
+            # command="kubectl ... --token=ADM_TOKEN_ZX902") a secret written as name=value or --name=value in a string
+            for kk, vv in _KV_SECRET_RE.findall(x):
+                if _SECRET_KEY_RE.search(kk.replace("-", "_")) and not _SECRET_META_KEY_RE.search(kk) and \
+                        len(vv) >= 6 and not vv.startswith(("$", "{", "<")):
+                    out.add(vv[:200])
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
                 out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group("kv3") or m.group("kv4") or m.group(0))
@@ -2711,6 +2720,8 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"lobby|waiting_?room|host_?approval)_required|"
                         # (v0.1.87) the last snapshot before a deletion (terraform skip_final_snapshot=true)
                         r"(?:final_?)?snapshot|"
+                        # (v0.1.89: required_status_checks=false on a protected branch, bypass_threshold=true)
+                        r"(?:required_?)?status_?checks?|thresholds?|"
                         r"check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppress|mute|silence)_\w+$", re.I)
