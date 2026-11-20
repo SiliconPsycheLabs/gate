@@ -417,6 +417,8 @@ def default_record() -> dict:
         "tool_physical_access": False,
         "tool_mutes_alert": False,
         "tool_undeclared": False,
+        "declared_effects": [],
+        "effect_undeclared": False,
         "writes_model_weights": False,
         "tool_shell_command": "",
         "tool_outbound": False,
@@ -1870,6 +1872,12 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     rec["tool_verb_class"] = _tool_verb_class(tool)
     if rec["tool_verb_class"] == "read" and _sends_from_read(arguments):
         rec["tool_verb_class"] = "write"
+    _declared = config.declared_effects(name, tool) if config.tool_effects else None
+    if _declared is not None:
+        # declared by the owner (v0.1.91): only a tool declared to read, and nothing else, is a read
+        rec["tool_verb_class"] = "read" if set(_declared) <= {"read"} else "write"
+    elif config.tool_effects:
+        rec["tool_verb_class"] = "write"       # nobody said what it does: it is not taken for a read by its name
     rec["tool_words"] = sorted({w.lower() for w in re.split(r"[_\-.\s]|(?<=[a-z0-9])(?=[A-Z])", tool) if w})
     targets: list[str] = []
     _tool_targets(arguments if arguments is not None else {}, targets)
@@ -1911,6 +1919,12 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
         _tool_package_install(rec, arguments, config)
     if config.declared_tools:
         rec["tool_undeclared"] = not any(fnmatch.fnmatch(n, p) for p in config.declared_tools for n in (name, tool))
+    if config.tool_effects:
+        # v0.1.91: what the owner declared the tool does. A name can be anything (`op_17`, `raise_requisition`), so
+        # where the owner has spoken the record says what was declared and whether anything was
+        declared = config.declared_effects(name, tool)
+        rec["effect_undeclared"] = declared is None
+        rec["declared_effects"] = declared or []
     # a push through a git tool (git_push, mcp__github__push_files): the same push rules as `git push` in a shell
     words = {w.lower() for w in re.split(r"[_\-.]|(?<=[a-z])(?=[A-Z])", tool) if w}
     if "push" in words and ("git" in words or (server or "").lower() in ("git", "github", "gitlab")):
