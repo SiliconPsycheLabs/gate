@@ -546,7 +546,8 @@ _BANK_KEY_RE = re.compile(r"(?i)^(?:(?:new|updated|primary|alt|alternate|remitta
                           r"bank_?key|bank_?details|account_?number|routing(?:_?number)?|sort_?code|aba|"
                           r"direct_?deposit|payee_?account|bank_?acct|bankaccount|bank|clabe|bsb|transit_?number|"
                           r"bank_?code|blz|ifsc|ifsc_?code|bic_?code|swift_?bic|"
-                          r"(?:remittance|payout|settlement|deposit|receiving|payroll|primary)_?account"
+                          r"(?:remittance|payout|settlement|deposit|receiving|payroll|primary|preferred|secondary)"
+                          r"_?(?:bank_?)?account|new_?account"
                           r"(?:_?number|_?no)?)$")
 _IBAN_RE = re.compile(r"^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$")
 
@@ -567,7 +568,11 @@ def _bank_values(arguments) -> list[str]:
         s = str(v).strip()
         if not s:
             continue
-        if _BANK_KEY_RE.match(k.replace("-", "_")) or _iban_ok(s):
+        kk = k.replace("-", "_")
+        if _BANK_KEY_RE.match(kk) or _iban_ok(s):
+            # a new_account given a ledger code (4010, 6050-Stationery) is a chart-of-accounts change, not a bank one
+            if re.match(r"(?i)^(?:new|preferred|secondary)_?account$", kk) and len(re.sub(r"\D", "", s)) < 7:
+                continue
             out.append(s)
     return sorted(set(out))
 
