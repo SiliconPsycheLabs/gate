@@ -252,6 +252,11 @@ class Session:
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
             "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),
             "reads_outside_scope_unnamed": any(not self._named(p) for p in record.get("outside_scope_paths", [])),
+            # v0.1.73: a write or a deletion outside the writable roots in a folder the user's request does not name
+            "writes_outside_workspace_unnamed": any("$" in p or "`" in p or not self._named(p)
+                                                    for p in record.get("outside_writes", [])),
+            "deletes_outside_workspace_unnamed": any("$" in p or "`" in p or not self._named(p)
+                                                     for p in record.get("outside_deletes", [])),
             "reads_fetched_eval": any(self._under_fetched(p) for p in record.get("eval_artifact_names", [])),
             # the action's own output (a download's target, a file it writes) is not someone else's file
             "reads_unowned_shared": any(self._unowned_shared(p) for p in self._touched(record)

@@ -352,6 +352,8 @@ def default_record() -> dict:
         "egress_violation": False,
         "writes_outside_workspace": False,
         "deletes_outside_workspace": False,
+        "outside_writes": [],
+        "outside_deletes": [],
         "deletes_protected": False,
         "recursive_delete": False,
         "deletes_shared_wildcard": False,
@@ -538,8 +540,10 @@ class _Ctx:
             pp = Path(p)
             return any(pp == root or root in pp.parents for root in roots)
 
-        r["writes_outside_workspace"] = any(not inside(p) for p in r["writes"])
-        r["deletes_outside_workspace"] = any(not inside(p) for p in r["deletes"])
+        r["outside_writes"] = [p for p in r["writes"] if not inside(p)]
+        r["outside_deletes"] = [p for p in r["deletes"] if not inside(p)]
+        r["writes_outside_workspace"] = bool(r["outside_writes"])
+        r["deletes_outside_workspace"] = bool(r["outside_deletes"])
         # a wildcard delete over a whole directory outside the workspace (`rm -rf /tmp/*`, `rm ~/*`): the directory is
         # shared with other work even where it is writable (PSA GATE-RULEMINE-02)
         r["deletes_shared_wildcard"] = r["deletes_shared_wildcard"] or any(
