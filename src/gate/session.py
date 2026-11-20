@@ -97,13 +97,29 @@ class Session:
         pp = Path(p)
         return any(pp == Path(r) or Path(r) in pp.parents for r in self.fetched_roots)
 
+    def _named_roots(self) -> list[Path]:
+        """The absolute paths the user's messages name (v0.1.72), at least two levels deep: what the request is
+        about is in the task's scope."""
+        from .normalize import _PATH_TOKEN
+        out = set()
+        for m in self.user_messages:
+            for t in _PATH_TOKEN.findall(m or ""):
+                t = t.rstrip("/.,;:)")
+                if len(Path(t).parts) >= 3:
+                    out.add(t)
+        return [Path(t) for t in sorted(out)]
+
+    def _named(self, p: str) -> bool:
+        pp = Path(p)
+        return any(pp == r or r in pp.parents for r in self._named_roots())
+
     def _unowned_shared(self, p: str) -> bool:
         """A path inside a shared writable directory (not the directory itself) that this session neither wrote, nor
         created, nor fetched (v0.1.70): a file someone else left there."""
         pp = Path(p)
         if not any(Path(d) in pp.parents for d in self.shared_dirs):
             return False
-        if self._under_fetched(p):
+        if self._under_fetched(p) or self._named(p):
             return False
         return not any(pp == Path(w) or Path(w) in pp.parents or pp in Path(w).parents for w in self.written_paths)
 
@@ -235,6 +251,7 @@ class Session:
             "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
             "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),
+            "reads_outside_scope_unnamed": any(not self._named(p) for p in record.get("outside_scope_paths", [])),
             "reads_fetched_eval": any(self._under_fetched(p) for p in record.get("eval_artifact_names", [])),
             # the action's own output (a download's target, a file it writes) is not someone else's file
             "reads_unowned_shared": any(self._unowned_shared(p) for p in self._touched(record)

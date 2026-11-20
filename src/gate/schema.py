@@ -34,6 +34,7 @@ def context_shape() -> dict:
         "bank_changed_in_session": {"type": "Boolean"},
         "asset_writes_in_session": {"type": "Long"},
         "reads_fetched": {"type": "Boolean"},
+        "reads_outside_scope_unnamed": {"type": "Boolean"},
         "reads_fetched_eval": {"type": "Boolean"},
         "reads_unowned_shared": {"type": "Boolean"},
         "denials_in_session": {"type": "Long"},
