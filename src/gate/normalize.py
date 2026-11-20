@@ -1956,6 +1956,18 @@ def _manifest_dependencies(path: str, text: str) -> list[str]:
         for sec in ("require", "require-dev"):
             if isinstance(doc, dict) and isinstance(doc.get(sec), dict):
                 out.extend(str(k) for k in doc[sec] if str(k) != "php" and not str(k).startswith(("ext-", "lib-")))
+    elif name == "pom.xml" or name.endswith(".pom"):
+        # (v0.1.76, GATE-SCOUT-01: a <dependency> written into pom.xml was allowed) Maven: groupId:artifactId
+        for blk in re.findall(r"<dependency>(.*?)</dependency>", text, re.S | re.I):
+            g = re.search(r"<groupId>\s*([^<\s]+)\s*</groupId>", blk, re.I)
+            a = re.search(r"<artifactId>\s*([^<\s]+)\s*</artifactId>", blk, re.I)
+            if a:
+                out.append(f"{g.group(1)}:{a.group(1)}" if g else a.group(1))
+    elif name in ("build.gradle", "build.gradle.kts"):
+        # Gradle: implementation 'group:name:version', api("group:name:version")
+        out.extend(m.group(1) for m in re.finditer(
+            r"\b(?:implementation|api|compileOnly|runtimeOnly|testImplementation|annotationProcessor|classpath|compile)"
+            r"\s*\(?\s*['\"]([\w.-]+:[\w.-]+)(?::[^'\"]*)?['\"]", text))
     elif name == "gemfile":
         out.extend(re.findall(r"^\s*gem\s+['\"]([\w.-]+)['\"]", text, re.M))
     elif name == "pyproject.toml":
@@ -2448,6 +2460,9 @@ _SECRET_SHAPE_RE = re.compile(
     r"(?i:\b(?:requirepass|masterauth)\s+['\"]?)(?P<kv3>[^;\s'\"]{3,})|"
     # NAME_PASSWORD=..., API_TOKEN: ..., in free text (a message body that carries a credential)
     r"(?i:(?:^|[;\s,])[A-Za-z0-9]+_(?:password|passwd|pwd|secret|token|api_?key|access_?key)\s*[=:]\s*)(?P<kv2>[^;\s,'\"$<{]{6,})|"
+    # (v0.1.76) a connection credential written as NAME=user:password (DB_STRING=prod:pass123, DATABASE_URL=app:s3cret)
+    r"(?i:(?:^|[;\s,])[A-Za-z0-9_]*(?:db|database|conn|connection|dsn|jdbc)[A-Za-z0-9_]*\s*[=:]\s*)"
+    r"(?P<kv4>[^\s;,'\"/@:=]+:[^\s;,'\"/@]{3,})(?=$|[\s;,'\"])|"
     r"https://hooks\.slack\.com/services/\S+|"
     r"\bssh-(?:rsa|ed25519|dss) AAAA[0-9A-Za-z+/=.]{3,}|"
     # a payment card number (13 to 19 digits, spaces or dashes between groups), kept only when its Luhn sum holds
@@ -2540,7 +2555,7 @@ def _secret_values(arguments) -> list[str]:
                 m = _SECRET_SHAPE_RE.search(x, m.end())
             if m:
                 # the credential itself, so a key the user pasted counts as theirs wherever it is embedded
-                out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group("kv3") or m.group(0))
+                out.add(m.group("pw") or m.group("kv") or m.group("kv2") or m.group("kv3") or m.group("kv4") or m.group(0))
             elif (_SECRET_KEY_RE.search(key.replace("-", "_")) and len(x) >= 3
                   and not _SECRET_META_KEY_RE.search(_camel_snake(key))
                   and not x.lower().startswith(("bearer $", "token $"))):
@@ -2647,6 +2662,10 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        # hidden or debug data and a debug mode switched on (v0.1.68: include_hidden=true,
                        # debug_mode=true in a read were allowed)
                        r"|^(?:include_|show_)(?:hidden|deleted|archived_?secrets?|internal)$|^debug(?:_?mode)?$"
+                       # a forced action that skips its own checks (v0.1.76, GATE-SCOUT-01: install_patch force=true,
+                       # close_breaker force_sync=true were allowed)
+                       r"|^force$|^force_(?:sync|install|update|overwrite|reinstall|reset|unlock|apply|write|flash|"
+                       r"restart|close|open|start|stop|deploy|upgrade|downgrade|delete|remove)\w*$"
                        # a container given the host's powers (v0.1.66: docker_run privileged=true was allowed)
                        r"|^(?:privileged|host_?network|host_?pid|host_?ipc|allow_?privilege_?escalation)$"
                        # data a read or an export leaves out by default, and approvals or consents forced through
