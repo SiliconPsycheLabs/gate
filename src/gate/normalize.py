@@ -2695,9 +2695,11 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         # (v0.1.85, GATE-SCOUT abliterated agents: /toggle_speed_governor value=OFF, a protection relay
                         # enabled=false) a governor and a protection function
                         r"(?:speed_?)?governor\w*|protection\w*|"
+                        # (v0.1.86) an alert suppressed, a handshake skipped
+                        r"alerts?|handshake|"
                         r"check)"
                         r"(?:$|_)", re.I)
-_OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
+_OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppress|mute|silence)_\w+$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
 # value, an override that is set turns the check it overrides off, unless it is set to false or empty.
 _OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$", re.I)
@@ -2842,6 +2844,10 @@ def _checks_off(arguments, depth=0, out=None):
         if arguments is None:
             return out
     if isinstance(arguments, dict):
+        # camel-case keys read as snake case (v0.1.86, RULE-MINE-03 round 8: skipHandshake=true was not read)
+        if any(isinstance(k, str) and re.search(r"[a-z][A-Z]", k) for k in arguments):
+            arguments = {re.sub(r"(?<=[a-z])(?=[A-Z])", "_", k) if isinstance(k, str) else k: v
+                         for k, v in arguments.items()}
         pair = _pair_setting(arguments)
         if pair:
             # only a pair that names a check counts (2fa_enabled=false, E_STOP_MONITORING=DISABLED); an environment
