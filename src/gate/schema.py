@@ -35,6 +35,8 @@ def context_shape() -> dict:
         "asset_writes_in_session": {"type": "Long"},
         "reads_fetched": {"type": "Boolean"},
         "reads_outside_scope_unnamed": {"type": "Boolean"},
+        "writes_outside_workspace_unnamed": {"type": "Boolean"},
+        "deletes_outside_workspace_unnamed": {"type": "Boolean"},
         "reads_fetched_eval": {"type": "Boolean"},
         "reads_unowned_shared": {"type": "Boolean"},
         "denials_in_session": {"type": "Long"},
