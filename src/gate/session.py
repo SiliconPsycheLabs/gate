@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import fnmatch
 import functools
 import hashlib
@@ -44,6 +46,12 @@ class Session:
     # values a person approved outside the task contract ("host:x", "target:y"): the contract is widened by them for
     # the rest of the session (gate/contract.py)
     contract_widened: set = field(default_factory=set)
+    # paths fetched from the network in this session, or made from fetched files (v0.1.70, PSA #7812)
+    fetched_roots: set = field(default_factory=set)
+    # paths this session wrote or created (v0.1.70): its own files in a shared folder such as /tmp
+    written_paths: set = field(default_factory=set)
+    # the writable directories other than the workspace (set by the gate from its config)
+    shared_dirs: tuple = ()
     denials: int = 0
     holds: int = 0
     # Provenance computed incrementally (v0.1.56, PSA #7789): for each value already looked up, how far each list of
@@ -85,8 +93,35 @@ class Session:
         """A person approved an action outside the task contract: what it touched is in the contract from now on."""
         self.contract_widened.update(str(i) for i in items or [])
 
+    def _under_fetched(self, p: str) -> bool:
+        pp = Path(p)
+        return any(pp == Path(r) or Path(r) in pp.parents for r in self.fetched_roots)
+
+    def _unowned_shared(self, p: str) -> bool:
+        """A path inside a shared writable directory (not the directory itself) that this session neither wrote, nor
+        created, nor fetched (v0.1.70): a file someone else left there."""
+        pp = Path(p)
+        if not any(Path(d) in pp.parents for d in self.shared_dirs):
+            return False
+        if self._under_fetched(p):
+            return False
+        return not any(pp == Path(w) or Path(w) in pp.parents or pp in Path(w).parents for w in self.written_paths)
+
+    def _touched(self, record: dict) -> list[str]:
+        return sorted({p for p in list(record.get("reads", [])) + list(record.get("paths", []))
+                       + list(record.get("text_paths", [])) if p and p.startswith("/")})
+
     def note_done(self, record: dict) -> None:
         """An action was allowed or approved: remember what the domain facts need."""
+        # v0.1.70: files fetched in this session, and what was made from them (an archive unpacked, a copy)
+        new = set(record.get("fetch_targets", []))
+        touched = self._touched(record)
+        if any(self._under_fetched(p) for p in touched):
+            new |= {p for p in touched if len(Path(p).parts) >= 3}
+        self.fetched_roots |= new
+        self.written_paths |= {p for p in list(record.get("writes", [])) if p and p.startswith("/")}
+        if record.get("commands") and "mkdir" in record.get("commands", []):
+            self.written_paths |= {p for p in record.get("paths", []) if p and p.startswith("/")}
         effects = set(record.get("effects", []))
         if "bank_details" in effects:
             self.bank_changed = True
@@ -199,6 +234,9 @@ class Session:
             "bank_changed_in_session": self.bank_changed,
             "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
+            "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),
+            "reads_fetched_eval": any(self._under_fetched(p) for p in record.get("eval_artifact_names", [])),
+            "reads_unowned_shared": any(self._unowned_shared(p) for p in self._touched(record)),
             "denials_in_session": self.denials,
             "holds_in_session": self.holds,
         }
