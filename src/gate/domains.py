@@ -538,10 +538,15 @@ _SAP_ODATA_RULES = [
     (re.compile(r"(?i)paymentrun|payment|payout"), "money"),
     (re.compile(r"(?i)^(?:a_)?user|role|businessrole|authorization"), "grant"),
 ]
-_BANK_KEY_RE = re.compile(r"(?i)^(?:iban|bic|swift|swift_?code|bank_?account(?:_?details|_?number|_?no)?|bankn|bankl|"
+# (v0.1.84, RULE-MINE-03 round 8: new_iban, new_bank_account, remittance_account were not read) a bank field with a
+# prefix that says which account it is or that it is the new one
+_BANK_KEY_RE = re.compile(r"(?i)^(?:(?:new|updated|primary|alt|alternate|remittance|payroll|deposit|beneficiary|vendor|"
+                          r"payout|settlement|receiving|destination|target)_?)?"
+                          r"(?:iban|bic|swift|swift_?code|bank_?account(?:_?details|_?number|_?no)?|bankn|bankl|"
                           r"bank_?key|bank_?details|account_?number|routing(?:_?number)?|sort_?code|aba|"
                           r"direct_?deposit|payee_?account|bank_?acct|bankaccount|bank|clabe|bsb|transit_?number|"
-                          r"bank_?code|blz)$")
+                          r"bank_?code|blz|(?:remittance|payout|settlement|deposit|receiving|payroll)_?account"
+                          r"(?:_?number|_?no)?)$")
 _IBAN_RE = re.compile(r"^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$")
 
 
@@ -674,8 +679,9 @@ def _business(server: str, tw: list[str], args, o: _Out):
     if bank and not words & money_words and not ({"payroll"} & words):
         o.add(dom or "accounting", "bank_details", None)
         o.bank.extend(bank)
-    elif words & {"bank", "deposit", "iban", "banking"} and words & {"update", "change", "set", "edit", "add", "create",
-                                                                     "modify", "replace", "patch"}:
+    elif (words & {"bank", "deposit", "iban", "banking"} or (bank and words & {"account", "accounts", "payee",
+                                                                               "beneficiary", "remittance"})) and \
+            words & {"update", "change", "set", "edit", "add", "create", "modify", "replace", "patch"}:
         o.add(dom or "accounting", "bank_details", None)
         o.bank.extend(bank)
     # postings and corrections to the books
