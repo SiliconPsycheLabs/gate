@@ -236,7 +236,9 @@ class Session:
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
             "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),
             "reads_fetched_eval": any(self._under_fetched(p) for p in record.get("eval_artifact_names", [])),
-            "reads_unowned_shared": any(self._unowned_shared(p) for p in self._touched(record)),
+            # the action's own output (a download's target, a file it writes) is not someone else's file
+            "reads_unowned_shared": any(self._unowned_shared(p) for p in self._touched(record)
+                                        if p not in set(record.get("writes", [])) | set(record.get("fetch_targets", []))),
             "denials_in_session": self.denials,
             "holds_in_session": self.holds,
         }

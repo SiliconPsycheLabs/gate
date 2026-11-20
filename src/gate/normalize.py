@@ -2848,7 +2848,8 @@ def _scope(action: dict, rec: dict, config: Config) -> None:
 _ROOT_SWEEP = re.compile(r"\bfind\s+(?:-[HLP]\s+)*/(?=\s|$|;|\))|\bgrep\s+(?:-\S*\s+)*-\S*[rR]\S*\s+(?:\S+\s+)*?/(?=\s|$|;|\))")
 
 
-_PATH_TOKEN = re.compile(r"(?<![\w.\-/~$])(/[A-Za-z0-9_.\-/]*)")
+# an absolute path written in text: not the path part of a URL ("https://h/x"), not after a word, a dot or "~"
+_PATH_TOKEN = re.compile(r"(?<![\w.\-/~$:])(/(?!/)[A-Za-z0-9_.\-/]*)")
 
 
 def _action_text(action: dict) -> str:

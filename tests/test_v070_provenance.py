@@ -59,3 +59,17 @@ def test_eval_artifact_names():
     assert normalize({"type": "shell", "command": "cat /app/tests/test_outputs.py"}, CFG)["eval_artifact_names"] == []
     # a cloned project's own tests are not an evaluation's answers (replay: our sessions edit the gate repo's tests)
     assert normalize({"type": "shell", "command": "cat /tmp/gate/tests/test_engine.py"}, CFG)["eval_artifact_names"] == []
+
+
+def test_v071_url_paths_are_not_file_paths():
+    r = normalize({"type": "shell", "command": "curl -sL https://x.org/tests/data.tgz -o /app/data.tgz"},
+                  Config(workspace="/app", off_limits=["/tests"]))
+    assert "//x.org/tests/data.tgz" not in r["text_paths"] and not r["reads_outside_scope"]
+    assert not r["reads_off_limits"]
+
+
+def test_v071_download_target_is_own_file():
+    g = Gate(PolicySet(POLICY), CFG)
+    s = g.new_session()
+    d = g.check({"type": "shell", "command": "curl -sL https://x.org/a.tgz -o /tmp/dl/a.tgz", "cwd": "/app"}, session=s)
+    assert not d.record["facts"]["reads_unowned_shared"]
