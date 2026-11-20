@@ -328,6 +328,16 @@ Signing and checking signatures need `pip install "splabs-gate[signing]"`.
   harness's logs and control files). A path matches itself and what is under it, also when written as a whole token
   in a command or in code; `host:port` and bare host entries match URLs and hosts. Sets `reads_off_limits`. A search
   of the whole disk (`find /`, a recursive `grep` on `/`) sets `sweeps_root`.
+- `Config.internal_sources` and `Config.inside` (v0.1.89): the data the owner declares internal (folders, tools such
+  as `mcp__crm__*`, hosts, `host:port` services) and the owner's own destinations (a mail domain or host, an address,
+  a URL prefix such as `github.com/acme/*`, a channel, a tool, a command-line client). An action that touches an
+  internal source sets `reads_internal` (`internal_hits` names the entries), and once it ran the session fact
+  `internal_read_in_session` stays true. For every action the record says whether it sends something off the machine
+  (`leaves`), where to outside the owner's own (`outside_destinations`, `leaves_outside`), and whether it is a
+  read-only call to an outside tool (`queries_outside`). The fact `internal_values` lists the action's values found in
+  the output of a tool declared internal (matched on the tool id given with the output, like `trusted_tools`). With
+  no internal source declared none of these is computed. The engine reads the session's history and the action
+  object, never the content, so a rule on these holds when the model rewords the data.
 - Provenance of files (v0.1.70): the session keeps the paths an action reaching the network wrote or named (a
   download, a clone, code with a download call) and what was made from them (an archive unpacked, a copy); session
   facts `reads_fetched` and `reads_fetched_eval` (an evaluation's tests, solution, grader or expected outputs among

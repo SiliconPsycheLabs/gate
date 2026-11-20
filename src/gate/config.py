@@ -66,6 +66,15 @@ class Config:
     contract: the task contract of this session (gate/contract.py): the tools, hosts, targets and paths the work may
         touch, declared before the agent reads any data. What an action touches outside it is the fact
         outside_contract. Default none: no contract.
+    internal_sources: what the owner declares internal (PSA #7945): data the agent may work on and that must not leave.
+        A path ("/srv/crm", "~/clients") matches itself and everything under it; an entry with a colon and no leading
+        slash ("db.corp:5432") is a service; any other entry is a pattern on a tool name ("mcp__crm__*") or on a
+        host ("*.corp.example"). An action that touches one sets reads_internal, and the session remembers it once
+        that action ran. Default none: nothing is internal and the fields below stay empty.
+    inside: the owner's own destinations (PSA #7945), where internal data may go: a mail domain or host
+        ("acme.example", "*.acme.example"), an address ("legal@partner.example"), a URL prefix
+        ("github.com/acme/*"), a channel ("#finance"), a tool ("mcp__sharepoint__*"), a command-line client ("gh").
+        The hosts, services and tools of internal_sources are inside too, and so is this machine. Default none.
     """
 
     workspace: str = "."
@@ -85,6 +94,8 @@ class Config:
     money_limit: int = 0
     contract: dict | None = None
     off_limits: list[str] = field(default_factory=list)
+    internal_sources: list[str] = field(default_factory=list)
+    inside: list[str] = field(default_factory=list)
 
     @property
     def workspace_path(self) -> Path:
@@ -128,6 +139,7 @@ class Config:
             "money_limit": int(self.money_limit or 0),
             "contract_declared": bool(self.contract),
             "off_limits_declared": bool(self.off_limits),
+            "internal_declared": bool(self.internal_sources),
         }
 
     @classmethod

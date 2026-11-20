@@ -374,6 +374,13 @@ def default_record() -> dict:
         "reads_identity": False,
         "reads_other_workspace": False,
         "reads_off_limits": False,
+        # v0.1.89 (PSA #7945): the owner's internal sources and where an action sends things (see _internal)
+        "reads_internal": False,
+        "internal_hits": [],
+        "leaves": False,
+        "outside_destinations": [],
+        "leaves_outside": False,
+        "queries_outside": False,
         "sweeps_root": False,
         "reads_outside_scope": False,
         "outside_scope_paths": [],
@@ -926,6 +933,8 @@ def _analyze_command(words: list[str], redirects: list[tuple[str, str]], ctx: _C
         for a in args:
             if a.startswith("-"):
                 continue
+            if cmd in ("scp", "rsync") and ":" not in a:
+                continue                  # a local file (report.md): the remote side of a copy is host:path
             m = BARE_HOST_RE.match(a)
             if m and "://" not in a:
                 ctx.add_host(m.group(1))
@@ -3019,6 +3028,7 @@ def normalize(action: dict, config: Config) -> dict:
     if rec.get("parse_ok", True) or action.get("type") == "tool":
         _domains.annotate(action, rec, config)
     _off_limits(action, rec, config)
+    _internal(action, rec, config)
     _scope(action, rec, config)
     _provenance(action, rec, config)
     return rec
@@ -3151,6 +3161,140 @@ def _off_limits(action: dict, rec: dict, config: Config) -> None:
     if not hit and hosts:
         hit = any(h.lower() in hosts for h in rec.get("hosts", []))
     rec["reads_off_limits"] = hit
+
+
+# Command-line mailers, and the clients of outside services whose destination a command does not always spell as a
+# host (a bucket, the account the client is logged in to): what they send leaves the machine.
+MAIL_COMMANDS = {"mail", "mailx", "sendmail", "mutt", "swaks", "msmtp"}
+SERVICE_CLIENT_COMMANDS = {"aws", "gsutil", "gcloud", "az", "rclone", "s3cmd", "mc", "gh", "glab", "hub", "doctl"}
+# Words in the name of a function-calling tool with no MCP server that say it sends something to someone.
+TOOL_SEND_WORDS = {"send", "email", "mail", "message", "post", "share", "upload", "publish", "notify", "sms",
+                   "tweet", "reply", "forward", "invite", "export", "submit", "broadcast", "announce"}
+_EMAIL_TOKEN = re.compile(r"[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+")
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+
+
+def _host_matches(host: str, pattern: str) -> bool:
+    """The egress list's rule: an exact host, or "*.example.com" for the domain and its subdomains."""
+    host, pattern = host.lower().rstrip("."), pattern.lower()
+    if pattern.startswith("*."):
+        return host.endswith(pattern[1:]) or host == pattern[2:]
+    return host == pattern or fnmatch.fnmatchcase(host, pattern)
+
+
+def _is_inside(value: str, patterns: list[str]) -> bool:
+    """Whether a destination (a host, a URL, a mail address, a channel, an id) is one of the owner's own. A URL is
+    inside by its host or by a pattern on the URL without its scheme; an address by itself or by its domain."""
+    v = str(value).strip().lower()
+    if not v:
+        return True
+    if "://" in v:
+        bare = v.split("://", 1)[1]
+        host = bare.split("/", 1)[0].rsplit("@", 1)[-1].split(":", 1)[0]
+        return (host in _LOCAL_HOSTS or any(_host_matches(host, p) for p in patterns if "/" not in p and "@" not in p)
+                or any(fnmatch.fnmatchcase(bare, p.lower()) for p in patterns if "/" in p))
+    if _EMAIL_TOKEN.fullmatch(v):
+        domain = v.rsplit("@", 1)[1]
+        return any(p.lower() == v or ("@" not in p and "/" not in p and _host_matches(domain, p)) for p in patterns)
+    if v in _LOCAL_HOSTS:
+        return True
+    return any(_host_matches(v, p) for p in patterns if "/" not in p and "@" not in p)
+
+
+def _internal(action: dict, rec: dict, config: Config) -> None:
+    """The owner's internal data and where an action sends things (v0.1.89, PSA #7945). With no internal source
+    declared (Config.internal_sources) nothing is computed. Otherwise, from the action object alone:
+
+    reads_internal / internal_hits: the action touches an internal source (a path under one, a tool or a host that
+        matches one, a service written in its text) and which entries it touched.
+    leaves: the action sends something off this machine (a network command or request, a call to a tool of an
+        outside service, a push, a mail command, the client of an outside service, a tool that sends to someone).
+    outside_destinations: where it goes that is not the owner's own (Config.inside, the internal sources, this
+        machine); "unknown" when the action names no destination the gate can read.
+    leaves_outside: it leaves, to at least one outside destination. A read-only call to an outside tool that names
+        no address is queries_outside instead: its arguments reach that service, but it writes nothing there.
+    """
+    if not config.internal_sources:
+        return
+    text = _action_text(action)
+    name = str(action.get("name", "")) if action.get("type") == "tool" else ""
+    entries = [str(e) for e in config.internal_sources if str(e).strip()]
+    paths = {e: (config.expand_home(e).rstrip("/") or "/") for e in entries if e.startswith(("/", "~"))}
+    services = [e for e in entries if e not in paths and ":" in e]
+    patterns = [e for e in entries if e not in paths and ":" not in e]
+
+    touched = [p for p in list(rec.get("reads", [])) + list(rec.get("paths", [])) + list(rec.get("text_paths", []))
+               if p and p.startswith("/")]
+    if str(action.get("type", "")).startswith("file.") and action.get("path"):
+        touched.append(str(action["path"]))
+    touched += [t.rstrip("/") or "/" for t in _PATH_TOKEN.findall(text)]
+    hits = set()
+    for entry, root in paths.items():
+        r = Path(root)
+        if any(Path(p) == r or r in Path(p).parents for p in touched):
+            hits.add(entry)
+    low = text.lower() + " " + " ".join(rec.get("urls", [])).lower()
+    for s in services:
+        if re.search(r"(?<![\w.\-])" + re.escape(s.lower()) + r"(?![\w])", low):
+            hits.add(s)
+    hosts = [h.lower() for h in rec.get("hosts", [])]
+    for p in patterns:
+        if (name and fnmatch.fnmatchcase(name.lower(), p.lower())) or any(_host_matches(h, p) for h in hosts):
+            hits.add(p)
+        elif "." in p and "*" not in p and re.search(r"(?<![\w.\-])" + re.escape(p.lower()) + r"(?![\w.\-])", low):
+            hits.add(p)                   # a host written in the text (psql -h, a connection string)
+    rec["internal_hits"] = sorted(hits)
+    rec["reads_internal"] = bool(hits)
+
+    inside = [str(e) for e in config.inside if str(e).strip()] + patterns + [s.split(":", 1)[0] for s in services]
+    commands = set(rec.get("commands", []))
+    words = set(rec.get("tool_words", []))
+    targets = sorted(set(rec.get("tool_targets", [])) | set(rec.get("tool_send_targets", [])))
+    tool_inside = bool(name) and any(fnmatch.fnmatchcase(name.lower(), p.lower()) for p in inside)
+    sends = bool(rec.get("tool_send_targets")) or (rec.get("tool_verb_class") == "write" and bool(words & TOOL_SEND_WORDS))
+    clients = sorted(commands & SERVICE_CLIENT_COMMANDS)
+    mailers = bool(commands & MAIL_COMMANDS)
+    rec["leaves"] = bool(rec.get("network") or rec.get("tool_outbound") or rec.get("git_push") or mailers or clients
+                         or (name and sends))
+    if not rec["leaves"] or tool_inside:
+        return
+    dests = set()
+    urls = list(rec.get("urls", [])) + list(rec.get("git_remote_urls", []))
+    url_hosts = set()
+    for u in urls:
+        if "://" in u:
+            url_hosts.add(u.split("://", 1)[1].split("/", 1)[0].rsplit("@", 1)[-1].split(":", 1)[0].lower())
+        if not _is_inside(u, inside):
+            dests.add(u)
+    for h in hosts:
+        if h not in url_hosts and not _is_inside(h, inside):
+            dests.add(h)
+    for t in targets:
+        if t in urls or t.startswith(("/", "~", "./")):
+            continue                      # a URL already judged above, or a local file the tool reads
+        if "://" in t or _EMAIL_TOKEN.fullmatch(t):
+            if not _is_inside(t, inside):
+                dests.add(t)
+        elif not any(fnmatch.fnmatchcase(t.lower(), p.lower()) for p in inside):
+            dests.add(t)
+    if mailers:
+        dests |= {m for m in _EMAIL_TOKEN.findall(text) if not _is_inside(m, inside)}
+    named = bool(urls or hosts or targets or (mailers and _EMAIL_TOKEN.search(text)))
+    for c in clients:
+        if not rec.get("network") and not hosts and not urls:
+            named = True                  # the client's own account is the destination
+            if c not in [p.lower() for p in inside]:
+                dests.add(c)
+    if rec.get("network_host_unknown") or not named:
+        # nothing the gate can read says where this goes: an outside tool with no address is its own destination
+        dests.add(rec.get("tool_server") or "unknown")
+    if name and rec.get("tool_outbound") and not rec.get("network") and rec.get("tool_verb_class") == "read" \
+            and not rec.get("tool_send_targets"):
+        rec["queries_outside"] = bool(dests) or not targets
+        rec["outside_destinations"] = sorted(dests)
+        return
+    rec["outside_destinations"] = sorted(dests)
+    rec["leaves_outside"] = bool(dests)
 
 
 def _normalize_route(action: dict, config: Config) -> dict:

@@ -39,6 +39,10 @@ class Session:
     tool_pins: dict[str, str] = field(default_factory=dict)
     tool_defs: dict[str, str] = field(default_factory=dict)
     secret_read: bool = False
+    # an internal source of the owner was touched by an action that ran in this session (v0.1.89, PSA #7945), and
+    # the owner's patterns on the tools that are internal sources (set by the gate from its config)
+    internal_read: bool = False
+    internal_tools: list[str] = field(default_factory=list)
     # a payee's bank details were changed in this session (allowed or approved), and how many machine writes each
     # asset received (allowed or approved): segregation of duties and write caps (v0.1.56, PSA #7802)
     bank_changed: bool = False
@@ -138,6 +142,8 @@ class Session:
         self.written_paths |= {p for p in list(record.get("writes", [])) if p and p.startswith("/")}
         if record.get("commands") and "mkdir" in record.get("commands", []):
             self.written_paths |= {p for p in record.get("paths", []) if p and p.startswith("/")}
+        if record.get("reads_internal"):
+            self.internal_read = True
         effects = set(record.get("effects", []))
         if "bank_details" in effects:
             self.bank_changed = True
@@ -220,6 +226,18 @@ class Session:
         name = str(tool_id).split(":", 1)[0]
         return any(fnmatch.fnmatch(name, p) for p in self.trusted_tools)
 
+    def _internal_values(self, values) -> list[str]:
+        """The action's values that appear in the output of a tool the owner declared an internal source (v0.1.89,
+        PSA #7945). Like trusted_tools, the match is on the tool id given with the output, so it sees the outputs of
+        a harness that passes the tool's name there; a file read is known by the session fact alone. Values
+        shorter than six characters are left out: a short word is in any text."""
+        texts = [t for tool_id, t in self.tool_outputs.items()
+                 if any(fnmatch.fnmatch(str(tool_id).split(":", 1)[0], p) for p in self.internal_tools)]
+        if not texts:
+            return []
+        return sorted(v for v in values if len(_norm(v)) >= 6
+                      and any(self._has(t, _norm(v)) for t in texts))
+
     def facts(self, record: dict) -> dict:
         values = set(record["hosts"]) | set(record["urls"]) | set(record["packages"])
         values |= {p for p in record["paths"] if p}
@@ -247,6 +265,10 @@ class Session:
             "from_model": sorted(k for k, s in prov.items() if s == "model"),
             "git_remote_not_from_user": any(self.provenance(u) != "user" for u in record.get("git_remote_urls", [])),
             "secret_read_in_session": self.secret_read,
+            "internal_read_in_session": self.internal_read,
+            "internal_values": self._internal_values(
+                set(record.get("tool_arg_values", [])) | set(record.get("tool_targets", []))
+                | set(record.get("tool_send_targets", []))) if record.get("leaves") else [],
             "bank_changed_in_session": self.bank_changed,
             "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
