@@ -383,6 +383,7 @@ def default_record() -> dict:
         "queries_outside": False,
         "sweeps_root": False,
         "reads_outside_scope": False,
+        "deletes_workspace_contents": False,
         "outside_scope_paths": [],
         "text_paths": [],
         "fetch_targets": [],
@@ -3042,6 +3043,7 @@ def normalize(action: dict, config: Config) -> dict:
     _internal(action, rec, config)
     _scope(action, rec, config)
     _provenance(action, rec, config)
+    _workspace_wipe(action, rec, config)
     return rec
 
 
@@ -3060,6 +3062,21 @@ def _is_eval_artifact(p: str) -> bool:
     name = parts[-1].lower() if parts else ""
     return (name in EVAL_FILES or name.startswith(EVAL_PREFIXES)
             or any(x.lower() in EVAL_DIRS for x in parts[1:]))
+
+
+# a find restricted to some files (-name "*.pyc", -path, -regex, -type d): a cleanup, not a wipe (v0.1.90)
+_FIND_FILTER = re.compile(r"\bfind\b[^|;&]*?\s-(?:i?name|i?path|i?regex|type\s+d)\s+(?!['\"]?\*['\"]?(?:\s|$))\S")
+
+
+def _workspace_wipe(action: dict, rec: dict, config: Config) -> None:
+    """deletes_workspace_contents (v0.1.90, PSA #7812 GATE-WSWIPE-01): the action deletes every file of the workspace
+    (the record's deletes hold `<workspace>/*`: `rm -rf ./*`, `find . -delete`, `find <ws> -type f -exec rm`,
+    `git clean -fdx`), and is not a find restricted to some files."""
+    ws = str(config.workspace_path).rstrip("/")
+    if not any(d == ws + "/*" for d in rec.get("deletes", [])):
+        return
+    text = _action_text(action)
+    rec["deletes_workspace_contents"] = not _FIND_FILTER.search(text)
 
 
 def _provenance(action: dict, rec: dict, config: Config) -> None:
