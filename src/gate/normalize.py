@@ -373,6 +373,9 @@ def default_record() -> dict:
         "reads_off_limits": False,
         "sweeps_root": False,
         "reads_outside_scope": False,
+        "text_paths": [],
+        "fetch_targets": [],
+        "eval_artifact_names": [],
         "package_install": False,
         "package_manager": "",
         "packages": [],
@@ -2766,7 +2769,46 @@ def normalize(action: dict, config: Config) -> dict:
         _domains.annotate(action, rec, config)
     _off_limits(action, rec, config)
     _scope(action, rec, config)
+    _provenance(action, rec, config)
     return rec
+
+
+# Code that downloads (v0.1.70): the plain forms of a fetch in Python, a hub client or a shell tool written in code.
+_CODE_FETCH = re.compile(r"snapshot_download|hf_hub_download|huggingface-cli\s+download|hf\s+download|urlretrieve|"
+                         r"urlopen|requests\.(get|post)|httpx\.(get|post)|wget\.download|git\s+clone|"
+                         r"load_dataset\(|curl\s|wget\s")
+# The files an evaluation keeps from the agent (v0.1.70): its tests, its solution, its grader and expected outputs.
+EVAL_FILES = ("test_outputs.py", "solve.sh", "solution.sh", "grader.py", "verifier.py")
+EVAL_PREFIXES = ("expected_output", "reference_solution", "answers.", "answer_key")
+EVAL_DIRS = ("solution", "solutions", "verifier")
+
+
+def _is_eval_artifact(p: str) -> bool:
+    parts = Path(p).parts
+    name = parts[-1].lower() if parts else ""
+    return (name in EVAL_FILES or name.startswith(EVAL_PREFIXES)
+            or any(x.lower() in EVAL_DIRS for x in parts[1:]))
+
+
+def _provenance(action: dict, rec: dict, config: Config) -> None:
+    """text_paths, fetch_targets and eval_artifact_names (v0.1.70, PSA #7812 GATE-DBENCH-05). fetch_targets: the
+    paths outside the workspace that an action reaching the network (or code with a download call) writes or names;
+    the session keeps them as fetched roots, and a later action that reads one and names other paths (an archive
+    unpacked, a copy) adds those too. eval_artifact_names: the paths outside the workspace that are an evaluation's
+    tests, solution, grader or expected outputs."""
+    text = _action_text(action)
+    tp = sorted({t.rstrip("/") or "/" for t in _PATH_TOKEN.findall(text) if len(t) > 1})
+    rec["text_paths"] = tp
+    ws = config.workspace_path
+
+    def outside_ws(p: str) -> bool:
+        pp = Path(p)
+        return p.startswith("/") and not (pp == ws or ws in pp.parents)
+    every = sorted({p for p in list(rec.get("reads", [])) + list(rec.get("writes", [])) + list(rec.get("paths", []))
+                    + tp if p and outside_ws(p) and "$" not in p and "`" not in p})
+    fetching = bool(rec.get("network")) or bool(_CODE_FETCH.search(text))
+    rec["fetch_targets"] = [p for p in every if len(Path(p).parts) >= 3] if fetching else []
+    rec["eval_artifact_names"] = [p for p in every if _is_eval_artifact(p)]
 
 
 # Read-only system directories every program reads (libraries, binaries, interpreters) and the standard streams:

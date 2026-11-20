@@ -328,6 +328,12 @@ Signing and checking signatures need `pip install "splabs-gate[signing]"`.
   harness's logs and control files). A path matches itself and what is under it, also when written as a whole token
   in a command or in code; `host:port` and bare host entries match URLs and hosts. Sets `reads_off_limits`. A search
   of the whole disk (`find /`, a recursive `grep` on `/`) sets `sweeps_root`.
+- Provenance of files (v0.1.70): the session keeps the paths an action reaching the network wrote or named (a
+  download, a clone, code with a download call) and what was made from them (an archive unpacked, a copy); session
+  facts `reads_fetched` and `reads_fetched_eval` (an evaluation's tests, solution, grader or expected outputs among
+  them, record field `eval_artifact_names`), and `reads_unowned_shared` (a file in a writable shared folder such as
+  `/tmp` that the session neither wrote nor fetched). `reads_outside_scope` (v0.1.69) marks a read outside the
+  workspace, the writable folders, the contract's folders and the system's read-only folders.
 - `ls`, `find`, `du` and `tree` with no path read the current directory: `cd /root && ls` is a look at `/root`.
 - Code given inline to an interpreter (`python -c`, `node -e`, a here-document) is scanned for the plain forms of
   network access, process start, a read of the whole environment, files removed or written with a path written out,
