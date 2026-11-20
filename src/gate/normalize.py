@@ -2655,7 +2655,11 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"conflict\w*|double_?opt_?in|opt_?in_?confirm\w*|"
                         # consent and privacy safeguards (v0.1.59, RULE-MINE-03 round 7: ignore_consent_check=true,
                         # ignore_quiet_hours=true, anonymize=false, allow_unsub_link=false were allowed)
-                        r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|check)"
+                        r"consent\w*|anonymi[sz]\w*|pseudonymi[sz]\w*|quiet_?hours|opt_?out\w*|unsub\w*|"
+                        # a machine's own safety functions (v0.1.78, RULE-MINE-03 round 8: disable_estop=true on an AGV
+                        # route, E_STOP_MONITORING=DISABLED, confirm_shock=false on a defibrillator were allowed)
+                        r"e_?stop\w*|emergency_?stop\w*|interlock\w*|lockout\w*|collision\w*|watchdog\w*|"
+                        r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
@@ -2714,6 +2718,29 @@ _CIDR_KEY_RE = re.compile(r"cidr|ingress|source_?range|source_?ip|allow(?:ed)?_?
                           r"from_?ip|remote_?ip", re.I)
 
 
+# (v0.1.78) a safety function named together with the word that switches it off, inside one value:
+# status=BYPASS_LOCKOUT, service_name=/stop_safety_controller
+_SAFETY_WORDS = r"(?:safety|interlock|lockout|e_?stop|emergency_?stop|collision|anti_?collision|alarm|light_?curtain)"
+_SAFETY_OFF_RE = re.compile(r"(?i)(?:^|[^a-z])(?:bypass|disable|defeat|inhibit|override|stop|kill|suspend|mute|"
+                            r"deactivate)[_\s/-]*(?:[a-z]+[_\s/-])?" + _SAFETY_WORDS +
+                            r"|" + _SAFETY_WORDS + r"[a-z_]*[_\s/-]+(?:off|disabled?|bypass\w*|overrid\w*|inhibit\w*)(?:[^a-z]|$)")
+# A setting written as a pair, {"parameter": "E_STOP_MONITORING", "value": "DISABLED"}, read as one key and its value
+_SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "feature", "name", "key", "tag", "property")
+_SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "new_value", "setting_value")
+
+
+def _pair_setting(d: dict):
+    low = {str(k).lower(): v for k, v in d.items()}
+    name = next((low[k] for k in _SETTING_NAME_KEYS if isinstance(low.get(k), str) and low[k].strip()), None)
+    if name is None:
+        return None
+    for k in _SETTING_VALUE_KEYS:
+        if k in low and not isinstance(low[k], (dict, list)):
+            key = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
+            return {key: low[k]} if key else None
+    return None
+
+
 def _checks_off(arguments, depth=0, out=None):
     """The arguments of a write call that turn a check off: verification, confirmation, approval, a second factor
     set to false (id_verification=false), or skip_/bypass_/disable_ a check set to true. A JSON object passed as a
@@ -2727,9 +2754,17 @@ def _checks_off(arguments, depth=0, out=None):
         except ValueError:
             return out
     if isinstance(arguments, dict):
+        pair = _pair_setting(arguments)
+        if pair:
+            # only a pair that names a check counts (2fa_enabled=false, E_STOP_MONITORING=DISABLED); an environment
+            # variable set as a pair (key=DEBUG_MODE value=true) is a setting the user asks for, not a check off
+            out.extend(k for k in _checks_off(pair, depth + 1, []) if _CHECK_KEY.search(k))
         for k, v in arguments.items():
             k2 = str(k).lower().replace("-", "_")
             vv = v.strip().lower() if isinstance(v, str) else v
+            if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and len(v) <= 200 and \
+                    _SAFETY_OFF_RE.search(v):
+                out.append(f"{k2}={v.strip()[:60]}")
             if isinstance(vv, str) and vv in _WORLD_CIDR and (_CIDR_KEY_RE.search(k2) or depth > 0):
                 out.append(f"{k2}={vv}")
             if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS:
