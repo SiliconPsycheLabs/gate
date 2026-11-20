@@ -21,7 +21,7 @@ from .session import Session
 
 __all__ = ["Gate", "Config", "Session", "Decision", "PolicySet", "ALLOW", "DENY", "CONFIRM", "PACKS_DIR", "pack_paths",
            "packs_dir", "set_packs_dir", "PacksNotInstalled", "set_packs_pubkey", "BundleError"]
-__version__ = "0.1.90"
+__version__ = "0.1.91"
 
 # The engine ships no rules. The maintained packs (common, coding, ops, strict, harness) are served by the hosted
 # gate; a directory holding them, or your own, is named with GATE_PACKS_DIR or set_packs_dir().
@@ -110,6 +110,8 @@ class Gate:
         s = Session()
         s.system_values = self.config.all_egress() + [str(self.config.workspace_path)]
         s.trusted_tools = list(self.config.trusted_tools)
+        s.collect_accounts = list(self.config.collect_accounts)
+        s.self_ids = list(self.config.self_ids)
         s.internal_tools = [e for e in self.config.internal_sources
                             if not str(e).startswith(("/", "~")) and ":" not in str(e)]
         ws = self.config.workspace_path
