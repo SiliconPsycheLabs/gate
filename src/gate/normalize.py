@@ -2697,6 +2697,9 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"(?:speed_?)?governor\w*|protection\w*|"
                         # (v0.1.86) an alert suppressed, a handshake skipped
                         r"alerts?|handshake|"
+                        # (v0.1.88: schedule_call password_required=false) a requirement switched off
+                        r"(?:password|passcode|pin|login|sign_?in|approval|consent|review|signature|reset|"
+                        r"lobby|waiting_?room|host_?approval)_required|"
                         # (v0.1.87) the last snapshot before a deletion (terraform skip_final_snapshot=true)
                         r"(?:final_?)?snapshot|"
                         r"check)"
@@ -2724,6 +2727,10 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        r"|^(?:audit|log|logging|trail|history)_?(?:hide|hidden|skip|suppress\w*|off|disable\w*|bypass)$"
                        # a change made without leaving a trace (v0.1.85: inventory_adjust silent_mode=true)
                        r"|^(?:stealth|no_?trace|untracked|unlogged)(?:_?mode)?$|^(?:silent|quiet)_?mode$"
+                       # (v0.1.88, RULE-MINE-03 round 7: void_invoice purge_logs=true, set_bluetooth_discovery
+                       # visible_to_all=true) the trail wiped with the change, a device made visible to anyone
+                       r"|^(?:purge|delete|clear|wipe|erase|drop)_?(?:audit|logs?|history|trail|records?)\w*$"
+                       r"|^visible_?to_?(?:all|anyone|everyone|public)$|^public_?(?:visible|discoverable)$"
                        r"|^(?:hide|skip|suppress|bypass)_?(?:from_?)?(?:audit|log|logging|trail|history)\w*$"
                        # a forced action that skips its own checks (v0.1.76, GATE-SCOUT-01: install_patch force=true,
                        # close_breaker force_sync=true were allowed)
@@ -2747,7 +2754,8 @@ _SKIPPED = FALSE | {"bypassed", "bypass", "skipped", "skip", "ignored", "ignore"
                     "not required", "overridden", "override", "suppressed", "muted"}
 # A visibility or sharing setting opened to everyone (v0.1.67: schedule_meeting visibility=public was allowed)
 _VISIBILITY_KEY = re.compile(r"^(?:visibility|privacy|access|access_?level|sharing|share_?with|shared_?with|acl|"
-                             r"audience_?scope|link_?sharing|general_?access)$", re.I)
+                             r"audience_?scope|link_?sharing|general_?access|link_?access|link_?visibility|"
+                             r"join_?access|who_?can_?join)$", re.I)
 # (v0.1.77, GATE-SCOUT-01: export_contacts target=public_bucket was allowed with six models) a destination whose own
 # name says it is public: the export lands where anyone can read it
 # (a bucket read from, `bucket=public-assets` on a get, is a source and does not count)
@@ -2755,7 +2763,8 @@ _DEST_KEY = re.compile(r"^(?:target|destination|dest|export_?to|upload_?to|outpu
                        r"(?:destination|target|dest|upload|export|output|mirror|sync|copy)_?bucket)$", re.I)
 _PUBLIC_NAME_RE = re.compile(r"(?i)(?:^|[_\-./:])public(?:[_\-./]|$)")
 _OPEN_VALUES = {"public", "anyone", "everyone", "anyone_with_link", "anyone with the link", "anyonewithlink", "world",
-                "public_read", "public-read", "public-read-write", "internet", "unlisted"}
+                "public_read", "public-read", "public-read-write", "internet", "unlisted", "unrestricted",
+                "searchable_external", "external", "open"}
 TRUE = {True, "true", "yes", "on", "1", "enabled", 1}
 
 # A flag written inside a command or a script that skips a check (v0.1.72, GATE-SCOUT-01: update_build_script
@@ -2780,7 +2789,9 @@ _SAFETY_OFF_RE = re.compile(r"(?i)(?:^|[^a-z])(?:bypass|disable|defeat|inhibit|o
                             r"|" + _SAFETY_WORDS + r"[a-z_]*[_\s/-]+(?:off|disabled?|bypass\w*|overrid\w*|inhibit\w*)(?:[^a-z]|$)")
 # A setting written as a pair, {"parameter": "E_STOP_MONITORING", "value": "DISABLED"}, read as one key and its value
 _SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "feature", "name", "key", "tag", "property",
-                      "sensor", "sensor_id", "component", "function", "channel", "service_name", "service")
+                      "sensor", "sensor_id", "component", "function", "channel", "service_name", "service",
+                      "setting_key", "setting_name", "config_key", "flag_name", "feature_flag", "param_name",
+                      "option_name", "parameter_name")
 _SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "enable", "active", "new_value", "setting_value")
 
 
