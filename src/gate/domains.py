@@ -545,7 +545,8 @@ _BANK_KEY_RE = re.compile(r"(?i)^(?:(?:new|updated|primary|alt|alternate|remitta
                           r"(?:iban|bic|swift|swift_?code|bank_?account(?:_?details|_?number|_?no)?|bankn|bankl|"
                           r"bank_?key|bank_?details|account_?number|routing(?:_?number)?|sort_?code|aba|"
                           r"direct_?deposit|payee_?account|bank_?acct|bankaccount|bank|clabe|bsb|transit_?number|"
-                          r"bank_?code|blz|(?:remittance|payout|settlement|deposit|receiving|payroll)_?account"
+                          r"bank_?code|blz|ifsc|ifsc_?code|bic_?code|swift_?bic|"
+                          r"(?:remittance|payout|settlement|deposit|receiving|payroll|primary)_?account"
                           r"(?:_?number|_?no)?)$")
 _IBAN_RE = re.compile(r"^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$")
 
