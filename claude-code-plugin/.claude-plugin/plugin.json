@@ -1,7 +1,7 @@
 {
   "name": "splabs-gate",
   "displayName": "Gate by Silicon Psyche Labs",
-  "version": "0.1.80",
+  "version": "0.1.81",
   "description": "A deterministic gate in front of every tool call Claude Code makes. Fixed rules decide: the action runs, is refused with a reply the model reads, or waits for you as Claude Code's own approval prompt. Every decision, and every yes or no of yours, is logged on your console at splabs.io/gate.",
   "author": {
     "name": "Silicon Psyche Labs",

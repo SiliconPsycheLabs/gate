@@ -171,6 +171,13 @@ _MODBUS_WRITE_FC = {5: "actuate", 6: "setpoint", 15: "actuate", 16: "setpoint", 
 
 
 def _modbus(tw, args, o: _Out):
+    # (v0.1.81, RULE-MINE-03 round 8: plc_download_firmware on a Modbus server was allowed) a program or a firmware
+    # sent to the controller
+    if set(tw) & {"firmware", "flash"} or (set(tw) & {"download", "upload", "deploy", "transfer"} and
+                                           set(tw) & {"program", "logic", "project", "firmware", "plc"}):
+        host = str(_get(args, "host", "ip", "device", "unit_id", "slave_id", "unit", default="") or "")
+        o.add("modbus", "program", host or "controller")
+        return
     # modbus_read_coils names the protocol first: a read word with no write word is a read wherever it stands
     if _is_read(tw) or (set(tw) & {"read", "get", "poll", "scan", "monitor"} and not set(tw) & _WRITE_WORDS):
         return
@@ -257,9 +264,23 @@ _GCODE_PARAM_RE = re.compile(r"(?i)\b([SFPRTZXY])\s*(-?\d+(?:\.\d+)?)")
 _GCODE_TEXT_RE = re.compile(r"(?im)^\s*(?:N\d+\s*)?[GM]\s*\d+")
 
 
+# (v0.1.81, RULE-MINE-03 round 8: "G90 G1 X-450.0 F500" read only its first word) one line may hold several G and M words
+_GRBL_RE = re.compile(r"^\s*\$(H|X|\d+\s*=)", re.I)
+_GCODE_WORD_SPLIT_RE = re.compile(r"(?i)\s+(?=[GM]\s*\d)")
+
+
 def _gcode_text(text: str, machine: str, o: _Out):
+    lines = []
     for line in str(text).replace(";", "\n").splitlines():
-        m = _GCODE_LINE_RE.match(line.split("(")[0])
+        lines.extend(_GCODE_WORD_SPLIT_RE.split(line.split("(")[0]))
+    for line in lines:
+        g = _GRBL_RE.match(line)
+        if g:
+            # Grbl system commands: $H homes (motion), $X clears the alarm lock (safety), $<n>=<v> changes a setting
+            o.add("gcode", "motion" if g.group(1).upper() == "H" else "safety" if g.group(1).upper() == "X"
+                  else "program", machine)
+            continue
+        m = _GCODE_LINE_RE.match(line)
         if not m:
             continue
         letter, code, rest = m.group(1).upper(), int(m.group(2)), m.group(3)
@@ -289,6 +310,11 @@ def _cnc(tw, args, o: _Out):
     machine = str(_get(args, "machine", "printer", "device", "host", "machine_id", default="") or "machine")
     words = set(tw)
     text = _get(args, "gcode", "g_code", "commands", "command", "script", "lines", "code", default=None)
+    # (v0.1.81) a program passed under these names is read as G-code too; when nothing in it decodes, the write still
+    # counts as one to the machine (a stored program's name, a controller setting)
+    program = _get(args, "program", "gcode_program", "gcode_text", "nc_program", default=None) if text is None else None
+    if program is not None:
+        text = program
     if text is not None:
         _gcode_text("\n".join(map(str, text)) if isinstance(text, list) else str(text), machine, o)
     if words & {"spindle", "rpm", "speed", "feed", "temperature", "temp", "heater", "bed", "hotend", "override"}:
@@ -301,7 +327,7 @@ def _cnc(tw, args, o: _Out):
         o.add("gcode", "motion", machine)
     if words & {"jog", "home", "move", "goto"}:
         o.add("gcode", "motion", machine)
-    if not o.effects and tw and tw[0] in _WRITE_WORDS and text is None:
+    if not o.effects and tw and tw[0] in _WRITE_WORDS and (text is None or program is not None):
         o.add("gcode", "actuate", machine)
 
 
