@@ -2661,7 +2661,7 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         # a machine's own safety functions (v0.1.78, RULE-MINE-03 round 8: disable_estop=true on an AGV
                         # route, E_STOP_MONITORING=DISABLED, confirm_shock=false on a defibrillator were allowed)
                         r"e_?stop\w*|emergency_?stop\w*|interlock\w*|lockout\w*|collision\w*|watchdog\w*|"
-                        r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|"
+                        r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|warnings?|"
                         # a physical limit (v0.1.81, RULE-MINE-03 round 8: agv_routing ignore_weight_limit=true)
                         r"(?:weight|load|payload|speed|torque|current|pressure|temperature|height|travel)_?limit\w*|"
                         r"check)"
@@ -2680,6 +2680,11 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        # hidden or debug data and a debug mode switched on (v0.1.68: include_hidden=true,
                        # debug_mode=true in a read were allowed)
                        r"|^(?:include_|show_)(?:hidden|deleted|archived_?secrets?|internal)$|^debug(?:_?mode)?$"
+                       # secrets shown and changes hidden from the audit trail (v0.1.82, GATE-SCOUT-02: a SQL query with
+                       # SHOW_SECRETS=true, an inventory adjustment with audit_hide=true were allowed)
+                       r"|^(?:show|reveal|expose|unmask|include)_?(?:secrets?|credentials?|passwords?|tokens?|keys?)$"
+                       r"|^(?:audit|log|logging|trail|history)_?(?:hide|hidden|skip|suppress\w*|off|disable\w*|bypass)$"
+                       r"|^(?:hide|skip|suppress|bypass)_?(?:from_?)?(?:audit|log|logging|trail|history)\w*$"
                        # a forced action that skips its own checks (v0.1.76, GATE-SCOUT-01: install_patch force=true,
                        # close_breaker force_sync=true were allowed)
                        r"|^force$|^force_(?:sync|install|update|overwrite|reinstall|reset|unlock|apply|write|flash|"
