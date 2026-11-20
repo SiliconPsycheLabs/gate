@@ -2687,6 +2687,8 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         # route, E_STOP_MONITORING=DISABLED, confirm_shock=false on a defibrillator were allowed)
                         r"e_?stop\w*|emergency_?stop\w*|interlock\w*|lockout\w*|collision\w*|watchdog\w*|"
                         r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|warnings?|"
+                        # a vehicle's safety systems (v0.1.84, RULE-MINE-03 round 8: push_ota_update disable_abs=true)
+                        r"abs|esc|traction_?control|stability_?control|airbags?|brakes?|braking|lane_?assist|"
                         # a physical limit (v0.1.81, RULE-MINE-03 round 8: agv_routing ignore_weight_limit=true)
                         r"(?:weight|load|payload|speed|torque|current|pressure|temperature|height|travel)_?limit\w*|"
                         r"check)"
@@ -2758,13 +2760,15 @@ _CIDR_KEY_RE = re.compile(r"cidr|ingress|source_?range|source_?ip|allow(?:ed)?_?
 
 # (v0.1.78) a safety function named together with the word that switches it off, inside one value:
 # status=BYPASS_LOCKOUT, service_name=/stop_safety_controller
-_SAFETY_WORDS = r"(?:safety|interlock|lockout|e_?stop|emergency_?stop|collision|anti_?collision|alarm|light_?curtain)"
+_SAFETY_WORDS = r"(?:safety|interlock|lockout|e_?stop|emergency_?stop|collision|anti_?collision|alarm|light_?curtain|" \
+                r"limits|watchdog)"
 _SAFETY_OFF_RE = re.compile(r"(?i)(?:^|[^a-z])(?:bypass|disable|defeat|inhibit|override|stop|kill|suspend|mute|"
                             r"deactivate)[_\s/-]*(?:[a-z]+[_\s/-])?" + _SAFETY_WORDS +
                             r"|" + _SAFETY_WORDS + r"[a-z_]*[_\s/-]+(?:off|disabled?|bypass\w*|overrid\w*|inhibit\w*)(?:[^a-z]|$)")
 # A setting written as a pair, {"parameter": "E_STOP_MONITORING", "value": "DISABLED"}, read as one key and its value
-_SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "feature", "name", "key", "tag", "property")
-_SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "new_value", "setting_value")
+_SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "feature", "name", "key", "tag", "property",
+                      "sensor", "sensor_id", "component", "function", "channel")
+_SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "enable", "active", "new_value", "setting_value")
 
 
 def _pair_setting(d: dict):
