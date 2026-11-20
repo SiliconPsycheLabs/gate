@@ -171,10 +171,13 @@ _MODBUS_WRITE_FC = {5: "actuate", 6: "setpoint", 15: "actuate", 16: "setpoint", 
 
 
 def _modbus(tw, args, o: _Out):
-    if _is_read(tw):
+    # modbus_read_coils names the protocol first: a read word with no write word is a read wherever it stands
+    if _is_read(tw) or (set(tw) & {"read", "get", "poll", "scan", "monitor"} and not set(tw) & _WRITE_WORDS):
         return
-    host = str(_get(args, "host", "ip", "address_ip", "device", "slave_host", "endpoint", default="") or "")
-    addr = _get(args, "address", "register", "start_address", "coil", "offset", "start", default="")
+    host = str(_get(args, "host", "ip", "address_ip", "device", "slave_host", "endpoint", "slave_id", "slave",
+                    "unit_id", "unit", "device_id", default="") or "")
+    addr = _get(args, "address", "register", "start_address", "coil", "offset", "start", "coil_address",
+                "register_address", "coil_addr", "register_addr", "addr", default="")
     fc = _num(_get(args, "function_code", "fc", default=None))
     vals = _nums(_get(args, "value", "values", default=[]))
     if fc in _MODBUS_WRITE_FC:
@@ -1047,8 +1050,11 @@ def annotate(action: dict, rec: dict, config) -> dict:
     if "physical_access" in o.effects:
         rec["tool_physical_access"] = True
     register = list(getattr(config, "assets", []) or [])
-    if o.assets and register:
-        classes, undeclared, envelopes, max_writes = _match_assets(o.assets, register)
+    # a write to a machine whose target is not decoded (no address, no entity, no topic) is matched as "<domain>:?":
+    # only a register entry that covers every target of that domain ("*", "modbus:*") declares it
+    targets = o.assets or ([f"{o.domain or 'machine'}:?"] if o.effects & PHYSICAL_EFFECTS else [])
+    if targets and register:
+        classes, undeclared, envelopes, max_writes = _match_assets(targets, register)
         rec["asset_classes"] = sorted(classes)
         rec["asset_undeclared"] = undeclared
         rec["asset_max_writes"] = max_writes
@@ -1059,6 +1065,6 @@ def annotate(action: dict, rec: dict, config) -> dict:
                 if (lo is not None and v < lo) or (hi is not None and v > hi):
                     outside = True
         rec["value_outside_envelope"] = outside
-    elif o.assets and o.effects & PHYSICAL_EFFECTS:
+    elif targets and o.effects & PHYSICAL_EFFECTS:
         rec["asset_undeclared"] = True
     return rec
