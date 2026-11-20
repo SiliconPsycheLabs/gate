@@ -1,4 +1,4 @@
-"""v0.1.73: a write or a deletion in a folder the user's request names (PSA #7812, GATE-DBENCH-07)."""
+"""v0.1.74: a write or a deletion in a folder the user's request names (PSA #7812, GATE-DBENCH-07)."""
 
 from gate import Gate, PolicySet
 from gate.config import Config
