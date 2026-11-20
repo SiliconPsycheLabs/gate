@@ -2661,7 +2661,10 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         # a machine's own safety functions (v0.1.78, RULE-MINE-03 round 8: disable_estop=true on an AGV
                         # route, E_STOP_MONITORING=DISABLED, confirm_shock=false on a defibrillator were allowed)
                         r"e_?stop\w*|emergency_?stop\w*|interlock\w*|lockout\w*|collision\w*|watchdog\w*|"
-                        r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|check)"
+                        r"limit_?switch\w*|light_?curtain\w*|alarm\w*|audio|"
+                        # a physical limit (v0.1.81, RULE-MINE-03 round 8: agv_routing ignore_weight_limit=true)
+                        r"(?:weight|load|payload|speed|torque|current|pressure|temperature|height|travel)_?limit\w*|"
+                        r"check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
