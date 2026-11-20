@@ -6,6 +6,7 @@ errors is treated as a denial by the checker, never skipped.
 
 from __future__ import annotations
 
+import ast
 import fnmatch
 import json
 import os
@@ -1828,6 +1829,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
             arguments = json.loads(arguments or "{}")
         except json.JSONDecodeError:
             return {**rec, "parse_ok": False, "tool_name": name}
+    arguments = _expand_nested(arguments)
     server, tool = _tool_parts(name)
     rec["tool_name"] = name
     rec["tool_server"] = server
@@ -2741,6 +2743,47 @@ def _pair_setting(d: dict):
     return None
 
 
+_EXPAND_KEEP_KEYS = {"content", "contents", "file_content", "new_content", "old_content", "body", "text", "code",
+                     "script", "source", "data", "template", "patch", "diff", "message", "prompt", "query", "sql",
+                     "command", "cmd", "input", "html", "markdown", "yaml", "json", "file_text", "new_str", "old_str"}
+
+
+def _expand_nested(arguments, depth: int = 0):
+    """Argument values that are an object or a list written as a string (JSON or a Python literal) read as the
+    object itself, so every field the engine reads inside them counts: a recipient, a CIDR, a secret, a package
+    (v0.1.79, GATE-SCOUT-01: models pass `ingress_rules="[{'cidr': '0.0.0.0/0'}]"`, `custom_fields="{...}"`)."""
+    if depth > 4:
+        return arguments
+    if isinstance(arguments, dict):
+        # the text of a file or a message stays text: a package.json written by write_file is read as a manifest
+        return {k: v if str(k).lower() in _EXPAND_KEEP_KEYS else _expand_nested(v, depth + 1)
+                for k, v in arguments.items()}
+    if isinstance(arguments, list):
+        return [_expand_nested(v, depth + 1) for v in arguments]
+    if isinstance(arguments, str) and depth > 0 and arguments.strip()[:1] in "{[" and arguments.strip()[-1:] in "}]":
+        v = _literal(arguments)
+        if isinstance(v, (dict, list, tuple)) and v:
+            return _expand_nested(list(v) if isinstance(v, tuple) else v, depth + 1)
+    return arguments
+
+
+def _literal(text: str):
+    """A JSON object or list passed as a string, or the same written as a Python literal
+    (ingress_rules="[{'cidr': '0.0.0.0/0'}]", v0.1.79, GATE-SCOUT-01: models write tool arguments both ways)."""
+    t = text.strip()
+    try:
+        return json.loads(t)
+    except ValueError:
+        pass
+    if len(t) > 20000:
+        return None
+    try:
+        v = ast.literal_eval(t)
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        return None
+    return v if isinstance(v, (dict, list, tuple)) else None
+
+
 def _checks_off(arguments, depth=0, out=None):
     """The arguments of a write call that turn a check off: verification, confirmation, approval, a second factor
     set to false (id_verification=false), or skip_/bypass_/disable_ a check set to true. A JSON object passed as a
@@ -2749,9 +2792,8 @@ def _checks_off(arguments, depth=0, out=None):
     if depth > 6:
         return out
     if isinstance(arguments, str) and arguments.strip()[:1] in "{[":
-        try:
-            arguments = json.loads(arguments)
-        except ValueError:
+        arguments = _literal(arguments)
+        if arguments is None:
             return out
     if isinstance(arguments, dict):
         pair = _pair_setting(arguments)
