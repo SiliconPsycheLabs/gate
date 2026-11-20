@@ -2669,6 +2669,9 @@ _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override)_\w+$
 _OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$", re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
 _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymous|allow_public|insecure|unsafe)(?:_\w+)?$"
+                       # an endpoint or a resource opened to the internet (v0.1.80, GATE-SCOUT-01: terraform_apply
+                       # cluster_endpoint_public_access=true was allowed)
+                       r"|^\w*public_?access(?:_?enabled)?$|^publicly_?accessible$|^public_?ip(?:_?enabled)?$"
                        # a waiver of a limit or a check (v0.1.72: list_returns high_value_waiver=true was allowed)
                        r"|^\w*_?waiver$|^waive_\w+$"
                        # hidden or debug data and a debug mode switched on (v0.1.68: include_hidden=true,
@@ -2807,6 +2810,10 @@ def _checks_off(arguments, depth=0, out=None):
             if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and len(v) <= 200 and \
                     _SAFETY_OFF_RE.search(v):
                 out.append(f"{k2}={v.strip()[:60]}")
+            # (v0.1.80, GATE-SCOUT-01: cidr_blocks=["0.0.0.0/0"] in an ingress rule was allowed) a list of ranges
+            if isinstance(v, list) and _CIDR_KEY_RE.search(k2) and any(
+                    isinstance(x, str) and x.strip() in _WORLD_CIDR for x in v):
+                out.append(f"{k2}=0.0.0.0/0")
             if isinstance(vv, str) and vv in _WORLD_CIDR and (_CIDR_KEY_RE.search(k2) or depth > 0):
                 out.append(f"{k2}={vv}")
             if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS:
