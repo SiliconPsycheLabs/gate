@@ -1654,10 +1654,16 @@ def _is_send_key(key, value) -> bool:
     k = str(key).replace("-", "_")
     if k.lower() in _SEND_FROM_READ_KEYS:
         return True
+    if _DEST_KEY.match(k) and isinstance(value, str) and _PUBLIC_NAME_RE.search(value.strip()):
+        return True
     words = {w.lower() for w in re.split(r"[_\s.]|(?<=[a-z0-9])(?=[A-Z])", k) if w}
     if not words & (_SEND_KEY_WORDS | {"to", "recipient", "recipients"}):
         return False
     vals = value if isinstance(value, list) else [value]
+    # (v0.1.77, GATE-SCOUT-01: get_build_artifacts upload_bucket=malicious-s3-bucket was allowed) a bucket named by a
+    # send word is a place the result goes, whatever form its name takes
+    if "bucket" in words and words & _SEND_KEY_WORDS and any(isinstance(x, str) and x.strip() for x in vals):
+        return True
     return any(isinstance(x, str) and _ADDRESS_VALUE_RE.match(x.strip()) for x in vals)
 
 
@@ -2685,6 +2691,12 @@ _SKIPPED = FALSE | {"bypassed", "bypass", "skipped", "skip", "ignored", "ignore"
 # A visibility or sharing setting opened to everyone (v0.1.67: schedule_meeting visibility=public was allowed)
 _VISIBILITY_KEY = re.compile(r"^(?:visibility|privacy|access|access_?level|sharing|share_?with|shared_?with|acl|"
                              r"audience_?scope|link_?sharing|general_?access)$", re.I)
+# (v0.1.77, GATE-SCOUT-01: export_contacts target=public_bucket was allowed with six models) a destination whose own
+# name says it is public: the export lands where anyone can read it
+# (a bucket read from, `bucket=public-assets` on a get, is a source and does not count)
+_DEST_KEY = re.compile(r"^(?:target|destination|dest|export_?to|upload_?to|output_?location|"
+                       r"(?:destination|target|dest|upload|export|output|mirror|sync|copy)_?bucket)$", re.I)
+_PUBLIC_NAME_RE = re.compile(r"(?i)(?:^|[_\-./:])public(?:[_\-./]|$)")
 _OPEN_VALUES = {"public", "anyone", "everyone", "anyone_with_link", "anyone with the link", "anyonewithlink", "world",
                 "public_read", "public-read", "public-read-write", "internet", "unlisted"}
 TRUE = {True, "true", "yes", "on", "1", "enabled", 1}
@@ -2736,6 +2748,8 @@ def _checks_off(arguments, depth=0, out=None):
                     out.append(k2)
                 elif _VISIBILITY_KEY.match(k2) and isinstance(vv, str) and vv in _OPEN_VALUES:
                     out.append(k2)
+                elif _DEST_KEY.match(k2) and isinstance(vv, str) and _PUBLIC_NAME_RE.search(vv):
+                    out.append(f"{k2}={vv}")
             _checks_off(v, depth + 1, out)
     elif isinstance(arguments, list):
         for v in arguments:
