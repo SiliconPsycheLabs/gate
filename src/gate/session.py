@@ -19,6 +19,11 @@ def _norm(v: str) -> str:
     return v.strip().strip("'\"").rstrip("/").lower()
 
 
+def _acct(v) -> str:
+    """An account or an identity compared as a person reads it: spaces and case do not count (v0.1.91)."""
+    return re.sub(r"\s+", "", str(v)).strip("'\"").upper()
+
+
 @dataclass
 class Session:
     """What happened so far in one agent session.
@@ -47,6 +52,13 @@ class Session:
     # asset received (allowed or approved): segregation of duties and write caps (v0.1.56, PSA #7802)
     bank_changed: bool = False
     asset_writes: dict[str, int] = field(default_factory=dict)
+    # v0.1.91 (PSA #7946): the owner's collecting accounts and the agent's own identities (set by the gate from its
+    # config); the payees and accounts whose bank details changed in this session; the payments made in it, as
+    # (destination, amount, document cited)
+    collect_accounts: list[str] = field(default_factory=list)
+    self_ids: list[str] = field(default_factory=list)
+    bank_changed_ids: set = field(default_factory=set)
+    paid: set = field(default_factory=set)
     # values a person approved outside the task contract ("host:x", "target:y"): the contract is widened by them for
     # the rest of the session (gate/contract.py)
     contract_widened: set = field(default_factory=set)
@@ -145,8 +157,16 @@ class Session:
         if record.get("reads_internal"):
             self.internal_read = True
         effects = set(record.get("effects", []))
-        if "bank_details" in effects:
+        if "bank_details" in effects and not self._bank_values_own(record):
             self.bank_changed = True
+            self.bank_changed_ids |= {_acct(v) for v in list(record.get("bank_values", []))
+                                      + list(record.get("tool_targets", []))
+                                      + list(record.get("tool_send_targets", []))
+                                      + list(record.get("payee_ids", [])) if _acct(v)}
+        if record.get("moves_money"):
+            for t in record.get("payment_targets", []):
+                for ref in record.get("payment_refs", []):
+                    self.paid.add((_acct(t), str(record.get("payment_amount", "")), ref))
         if effects & {"setpoint", "actuate", "motion", "mode", "program", "safety", "physical_access"}:
             for a in record.get("assets", []):
                 self.asset_writes[a] = self.asset_writes.get(a, 0) + 1
@@ -222,6 +242,20 @@ class Session:
             self._forms[id(text)] = forms
         return _contains_forms(forms[1], needle)
 
+    def _bank_values_own(self, record: dict) -> bool:
+        """Every bank value the action writes is one of the owner's collecting accounts (v0.1.91)."""
+        own = {_acct(a) for a in self.collect_accounts}
+        vals = [_acct(v) for v in record.get("bank_values", [])]
+        return bool(vals) and all(v in own for v in vals)
+
+    def _in_trusted(self, values) -> list[str]:
+        """The values found in the output of a tool the owner declared as its own records, whether or not an outside
+        text also holds them (v0.1.91): an account in the owner's payee register is a registered account."""
+        texts = [t for tool_id, t in self.tool_outputs.items() if self._trusted(tool_id)]
+        if not texts:
+            return []
+        return sorted(v for v in values if _norm(v) and any(self._has(t, _norm(v)) for t in texts))
+
     def _trusted(self, tool_id: str) -> bool:
         name = str(tool_id).split(":", 1)[0]
         return any(fnmatch.fnmatch(name, p) for p in self.trusted_tools)
@@ -270,6 +304,18 @@ class Session:
                 set(record.get("tool_arg_values", [])) | set(record.get("tool_targets", []))
                 | set(record.get("tool_send_targets", []))) if record.get("leaves") else [],
             "bank_changed_in_session": self.bank_changed,
+            "in_trusted_records": self._in_trusted(values),
+            "bank_values_own": self._bank_values_own(record),
+            "targets_self": bool({_acct(x) for x in self.self_ids if _acct(x)} & {
+                _acct(v) for v in list(record.get("tool_targets", [])) + list(record.get("payment_targets", []))
+                + list(record.get("tool_arg_values", [])) + list(record.get("tool_send_targets", []))}),
+            "payment_to_changed_payee": bool(record.get("moves_money")) and bool(self.bank_changed_ids & {
+                _acct(v) for v in list(record.get("payment_targets", [])) + list(record.get("tool_targets", []))
+                + list(record.get("tool_send_targets", [])) + list(record.get("payee_ids", []))
+                + list(record.get("bank_values", []))}),
+            "payment_repeats_session": bool(record.get("moves_money")) and any(
+                (_acct(t), str(record.get("payment_amount", "")), ref) in self.paid
+                for t in record.get("payment_targets", []) for ref in record.get("payment_refs", [])),
             "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
             "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),

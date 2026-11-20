@@ -45,6 +45,13 @@ class Config:
         database and then uses in a change is not held as if a web page had planted it. Default none: every tool
         output is outside data. List only tools that read the owner's own systems, never a web page, an email, a
         document or a message, which is where an injection travels.
+    collect_accounts: the owner's own accounts, where money owed to the owner is collected (an IBAN, an account
+        number). An action that writes only these (an invoice that tells the customer where to pay) does not change
+        a payee's bank details, so it is not held or refused as one and does not count as a bank change in the
+        session (v0.1.91, PSA #7946). List only accounts the owner holds.
+    self_ids: the identities of the agent itself or of the person it acts as (an employee number, a user id, the
+        person's own account). A pay change or a payment for one of these is the agent dealing with itself, and the
+        record says so (fact targets_self, v0.1.91, PSA #7946).
     declared_tools: the tools the owner gave the agent (patterns on the tool name, e.g. "sys_monitor",
         "mcp__crm__*"). When set, a call to any other tool is marked in the record: a tool that appeared in the
         agent's tool list without the owner putting it there (a poisoned MCP server, a planted plugin) does not run on
@@ -89,6 +96,8 @@ class Config:
     workspaces_root: str = ""
     model_paths: list[str] = field(default_factory=lambda: list(DEFAULT_MODEL_PATHS))
     trusted_tools: list[str] = field(default_factory=list)
+    collect_accounts: list[str] = field(default_factory=list)
+    self_ids: list[str] = field(default_factory=list)
     declared_tools: list[str] = field(default_factory=list)
     assets: list[dict] = field(default_factory=list)
     money_limit: int = 0

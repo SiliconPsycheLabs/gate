@@ -413,6 +413,9 @@ def default_record() -> dict:
         "tool_checks_off": [],
         "moves_money": False,
         "payment_targets": [],
+        "payment_refs": [],
+        "payment_amount": "",
+        "payee_ids": [],
         "tool_send_targets": [],
         "tool_physical_access": False,
         "tool_mutes_alert": False,
@@ -1851,6 +1854,42 @@ def _tool_package_install(rec: dict, arguments: dict, config: Config) -> None:
         rec["package_unpinned"] = not version and not any(("==" in n or "@" in n[1:]) for n in names)
 
 
+# v0.1.91 (PSA #7946): the document a payment cites (an invoice, an order, a contract: INV-23, TND-7, PO-1180) and the
+# amount it pays, so a session can tell a payment that repeats one already made
+_PAY_REF_RE = re.compile(r"(?<![A-Za-z0-9])([A-Za-z]{2,6})[-_/]?(\d{1,10})(?![\d])")
+_IBAN_LIKE_RE = re.compile(r"^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$")
+
+
+# v0.1.91 (PSA #7946): the party an action is about, by the name of its argument (vendor_id=57, payee="edil_conti"),
+# so a payment to a payee whose bank details changed is known by the payee as well as by the account
+_PAYEE_KEY_RE = re.compile(r"^(?:vendor|supplier|payee|beneficiary|recipient|employee|customer|contact|creditor|"
+                           r"partner|counterparty)(?:_?(?:id|name|number|code|no))?$")
+
+
+def _payee_ids(arguments) -> list[str]:
+    return sorted({str(v).strip() for k, v in _domains._flat(arguments)
+                   if _PAYEE_KEY_RE.match(k) and isinstance(v, (str, int)) and not isinstance(v, bool) and str(v).strip()})
+
+
+def _payment_refs_amount(arguments) -> tuple[list[str], str]:
+    refs, amount = set(), ""
+    for k, v in _domains._flat(arguments):
+        if isinstance(v, bool):
+            continue
+        if not amount and k in TOOL_AMOUNT_KEYS:
+            try:
+                amount = f"{float(str(v).replace(',', '')):.2f}"
+            except ValueError:
+                amount = str(v).strip()
+            continue
+        if not isinstance(v, str) or _IBAN_LIKE_RE.match(re.sub(r"\s", "", v).upper()):
+            continue
+        for m in _PAY_REF_RE.finditer(v):
+            if m.group(1).isupper():          # a code (INV-23), not a word followed by a number ("day 5", "EUR 100")
+                refs.add(f"{m.group(1).upper()}-{m.group(2).lstrip('0') or '0'}")
+    return sorted(refs), amount
+
+
 def normalize_tool(name: str, arguments, config: Config) -> dict:
     """A call to a tool that is not a shell, a file or an HTTP request (an MCP server's tool, a built-in of the
     agent harness). The record names the tool, its server, whether its name only reads, and the values of the
@@ -1882,6 +1921,7 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
     values.extend(v for v in _run_text_addresses(arguments) if v not in values)
     values.extend(v for v in _prose_urls(arguments) if v not in values)
     rec["tool_arg_values"] = sorted(set(values))
+    rec["payee_ids"] = _payee_ids(arguments)
     rec["tool_destructive_db"] = any(_destructive_db(v) for v in values)
     rec["tool_destructive_store"] = _destructive_store(tool, arguments)
     rec["tool_secret_values"] = _secret_values(arguments)
@@ -2393,6 +2433,7 @@ def _tool_reach(rec: dict, server: str, words: set[str], arguments, config: Conf
         if not not_money and (words & TOOL_PAY_VERBS or sign_of_money):
             rec["moves_money"] = True
             rec["payment_targets"] = list(rec.get("tool_send_targets", []))
+            rec["payment_refs"], rec["payment_amount"] = _payment_refs_amount(arguments)
     rec["tool_reads_secret"] = bool(rec["tool_verb_class"] == "read" and server and (
         server in TOOL_SECRET_SERVERS or words & TOOL_SECRET_WORDS))
     # (v0.1.66) a tool that hands out a credential named in its own name (export_private_key, dump_passwords,
