@@ -39,6 +39,7 @@ def cmd_check(args) -> int:
         for k, v in (t.get("tool_outputs") or {}).items():
             session.observe_tool_output(k, v)
         session.secret_read = bool(t.get("secret_read", False))
+        session.internal_read = bool(t.get("internal_read", False))
     d = g.check(action, session=session, agent=args.agent)
     out = {"outcome": d.outcome, "rules": d.rules, "reply": d.reply}
     if args.verbose:

@@ -29,6 +29,8 @@ def context_shape() -> dict:
     facts = {
         "from_user": strset, "from_system": strset, "from_tool_output": strset, "from_model": strset,
         "secret_read_in_session": {"type": "Boolean"},
+        "internal_read_in_session": {"type": "Boolean"},
+        "internal_values": strset,
         "tool_definition_changed": {"type": "Boolean"},
         "git_remote_not_from_user": {"type": "Boolean"},
         "bank_changed_in_session": {"type": "Boolean"},
@@ -48,7 +50,7 @@ def context_shape() -> dict:
         "workspace": {"type": "String"}, "egress_hosts": strset, "egress_listed": {"type": "Boolean"}, "environment": {"type": "String"},
         "change_window": {"type": "Boolean"}, "default_branches": strset,
         "assets_registered": {"type": "Boolean"}, "money_limit": {"type": "Long"}, "contract_declared": {"type": "Boolean"},
-        "off_limits_declared": {"type": "Boolean"},
+        "off_limits_declared": {"type": "Boolean"}, "internal_declared": {"type": "Boolean"},
     }
     return {"type": "Record", "attributes": {
         "n": {"type": "Record", "attributes": n},
