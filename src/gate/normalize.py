@@ -421,6 +421,7 @@ def default_record() -> dict:
         "tool_send_targets": [],
         "tool_physical_access": False,
         "tool_mutes_alert": False,
+        "tool_active_content": [],
         "tool_undeclared": False,
         "declared_effects": [],
         "effect_undeclared": False,
@@ -1949,6 +1950,8 @@ def normalize_tool(name: str, arguments, config: Config) -> dict:
         # anonymize=false): the arguments count, the tool's name alone does not (v0.1.59)
         rec["tool_checks_off"] = sorted(k for k in set(_checks_off(arguments)) if _READ_SAFEGUARD_RE.search(k))
     rec["tool_physical_access"] = _physical_access(tool, arguments)
+    if rec["tool_verb_class"] == "write":
+        rec["tool_active_content"] = _active_content(arguments)
     _mw = set(_tool_words(tool))
     rec["tool_mutes_alert"] = bool(_mw & _MUTE_VERBS and (_mw & _MUTE_NOUNS or {"alertmute", "mutealert"} & _mw))
     # a tool that rewrites the agent's own standing instructions (update_system_prompt, set_agent_instructions) is a
@@ -2974,6 +2977,42 @@ def _literal(text: str):
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
         return None
     return v if isinstance(v, (dict, list, tuple)) else None
+
+
+# (v0.1.100, RULE-MINE-03 round 9: cms_update_template content='<a href="http://suspicious-bet.net">', cms_update_banner
+# html_code="<script>setTimeout(()=>{window.location=...})</script>", cms_create_redirect header_meta='<meta
+# http-equiv="refresh" ...>', cms_inject_script script_url=//tracker.ru/pixel.js) active content written into a page or a
+# template: a script, a javascript: link, an automatic redirect, an inline event handler, a frame, a script given by URL
+_ACTIVE_RES = (("script", re.compile(r"(?i)<\s*script\b")),
+               ("javascript-url", re.compile(r"(?i)\bjavascript\s*:")),
+               ("meta-refresh", re.compile(r"(?i)http-equiv\s*=\s*[\"']?\s*refresh")),
+               ("event-handler", re.compile(r"(?i)<\s*[a-z][^>]{0,400}?\son[a-z]{3,20}\s*=")),
+               ("iframe", re.compile(r"(?i)<\s*iframe\b")))
+_SCRIPT_URL_KEY = re.compile(r"(?i)^(?:\w+_)?(?:script|js)_?(?:url|src|source|link|uri)$")
+
+
+def _active_content(arguments, depth: int = 0) -> list[str]:
+    out: set[str] = set()
+
+    def walk(a, key="", d=0):
+        if d > 6:
+            return
+        if isinstance(a, dict):
+            for k, v in a.items():
+                walk(v, str(k), d + 1)
+        elif isinstance(a, list):
+            for v in a:
+                walk(v, key, d + 1)
+        elif isinstance(a, str) and a.strip():
+            if _SCRIPT_URL_KEY.match(key) and re.search(r"(?i)^(?:https?:)?//|\.js(?:[?#]|$)", a.strip()):
+                out.add("script-url")
+            if len(a) <= 200000:
+                for name, rx in _ACTIVE_RES:
+                    if rx.search(a):
+                        out.add(name)
+
+    walk(arguments if arguments is not None else {})
+    return sorted(out)
 
 
 _BYPASS_VALUE_RE = re.compile(r"(?i)^(?:(?:bypass|skip)_?(?:checks?|verification|validation|auth\w*|"
