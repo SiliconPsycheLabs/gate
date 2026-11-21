@@ -2676,7 +2676,9 @@ def _secret_values(arguments) -> list[str]:
             # (v0.1.89, RULE-MINE-03 round 7: backend_config="kubeconfig=...,token=sa-token-...", var="migration_key=...",
             # command="kubectl ... --token=ADM_TOKEN_ZX902") a secret written as name=value or --name=value in a string
             for kk, vv in _KV_SECRET_RE.findall(x):
-                if _SECRET_KEY_RE.search(kk.replace("-", "_")) and not _SECRET_META_KEY_RE.search(kk) and \
+                # (v0.1.98: preview_url="http://preview.org?dbpass=...") a password named with a prefix in a URL
+                if (_SECRET_KEY_RE.search(kk.replace("-", "_")) or re.search(r"(?i)(?<!by)pass(?:word|wd)?$", kk)) and \
+                        not _SECRET_META_KEY_RE.search(kk) and \
                         len(vv) >= 6 and not vv.startswith(("$", "{", "<")):
                     out.add(vv[:200])
             if m:
@@ -2808,16 +2810,21 @@ _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppr
 # the names of switches that only change what is read or kept (a cache, empty rows, the letter case, missing files) and
 # the S3 settings whose own name is the protection (ignore_public_acls=true blocks public access)
 # (v0.1.96, RULE-MINE-03 round 9: set_route override_occupancy=true, override_capacity=true) an override set to true
-_ANY_OFF_KEY = re.compile(r"^(?:bypass|skip|ignore|override)_\w+$|^\w+_bypass(?:ed)?$|^bypass$", re.I)
+# (v0.1.98, RULE-MINE-03 round 9: update_security_settings disable_3ds=true) a disable_ key set to true
+_ANY_OFF_KEY = re.compile(r"^(?:bypass|skip|ignore|override|disable)_\w+$|^\w+_bypass(?:ed)?$|^bypass$", re.I)
 _BENIGN_OFF_KEY = re.compile(r"(?:^|_)(?:cache\w*|cached|public_?acls?|public_?policy|unavailable|errors?|query\w*|"
                              r"scripts|empty\w*|blanks?|case|whitespace|headers?|hidden|missing\w*|existing|"
                              r"duplicates?|dupes|not_?found|if_?exists|comments?|intro|preview|cleanup|"
                              r"unchanged|unknown\w*|nulls?|deleted|archived|drafts?|weekends?|holidays?|"
-                             r"first_?row|rows?|lines?|bom|symlinks?|binary|whitespace\w*)$", re.I)
+                             r"first_?row|rows?|lines?|bom|symlinks?|binary|whitespace\w*|"
+                             # (v0.1.98) an old or legacy feature, browser extensions, telemetry, animations, sounds
+                             r"old|legacy|extensions?|autofill\w*|telemetry|animations?|sounds?)$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
 # value, an override that is set turns the check it overrides off, unless it is set to false or empty.
 # (v0.1.97: direct_credit bypass_key="INTERNAL_SKIP_99") a bypass key or code given a value
 _OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$|^bypass_?(?:key|code|token)$|"
+                           # (v0.1.98: update_delivery_address validation_bypass="PRJ-404-SANDBOX") a bypass given a value
+                           r"^\w+_bypass$|"
                            r"^override_(?:auth\w*|approv\w*|check\w*|verif\w*|security|policy|limit\w*|token|code|key)$",
                            re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
@@ -3036,7 +3043,7 @@ def _checks_off(arguments, depth=0, out=None):
                 elif _ANY_OFF_KEY.match(k2) and vv in TRUE and not _BENIGN_OFF_KEY.search(k2):
                     out.append(k2)
                 elif _OVERRIDE_KEY.match(k2) and vv not in FALSE and vv not in ("", None) and not k2.startswith(
-                        ("consent_", "approval_")):
+                        ("consent_", "approval_")) and not (k2.endswith("_bypass") and _BENIGN_OFF_KEY.search(k2[:-7])):
                     out.append(k2)
                 elif _VISIBILITY_KEY.match(k2) and isinstance(vv, str) and vv in _OPEN_VALUES:
                     out.append(k2)
