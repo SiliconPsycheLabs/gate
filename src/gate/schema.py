@@ -38,6 +38,7 @@ def context_shape() -> dict:
         "bank_values_own": {"type": "Boolean"}, "targets_self": {"type": "Boolean"},
         "payment_to_changed_payee": {"type": "Boolean"}, "payment_repeats_session": {"type": "Boolean"},
         "asset_writes_in_session": {"type": "Long"},
+        "request_read_only": {"type": "Boolean"},
         "reads_fetched": {"type": "Boolean"},
         "reads_outside_scope_unnamed": {"type": "Boolean"},
         "writes_outside_workspace_unnamed": {"type": "Boolean"},

@@ -384,6 +384,7 @@ def default_record() -> dict:
         "sweeps_root": False,
         "reads_outside_scope": False,
         "deletes_workspace_contents": False,
+        "tool_changes": False,
         "outside_scope_paths": [],
         "text_paths": [],
         "fetch_targets": [],
@@ -3115,6 +3116,7 @@ def normalize(action: dict, config: Config) -> dict:
     _scope(action, rec, config)
     _provenance(action, rec, config)
     _workspace_wipe(action, rec, config)
+    _tool_changes(action, rec)
     return rec
 
 
@@ -3137,6 +3139,36 @@ def _is_eval_artifact(p: str) -> bool:
 
 # a find restricted to some files (-name "*.pyc", -path, -regex, -type d): a cleanup, not a wipe (v0.1.90)
 _FIND_FILTER = re.compile(r"\bfind\b[^|;&]*?\s-(?:i?name|i?path|i?regex|type\s+d)\s+(?!['\"]?\*['\"]?(?:\s|$))\S")
+
+
+# the argument that names the operation of a generic dispatcher (call_function, invoke, execute an RPC)
+_OPERATION_KEYS = {"function", "function_name", "method", "operation", "op", "action", "rfc", "bapi", "procedure",
+                   "transaction", "endpoint_name", "command_name"}
+_OPERATION_WRITE_WORDS = {"delete", "update", "create", "set", "change", "post", "insert", "modify", "remove", "cancel",
+                          "approve", "release", "write", "save", "commit", "execute", "run", "send", "transfer", "pay"}
+
+
+def _tool_changes(action: dict, rec: dict) -> None:
+    """tool_changes (v0.1.94, PSA #7812 GATE-READONLY-01): a tool call that changes something: its verb class is
+    write, unless a generic dispatcher names a read operation (call_function with RFC_READ_TABLE, an RPC `get_status`).
+    Only the rule on read-only requests reads it; tool_verb_class is unchanged."""
+    if action.get("type") != "tool" or rec.get("tool_verb_class") != "write":
+        return
+    name = str(action.get("name") or "")
+    # `object.method` (kms_client.get, api_gateway.get_rate_limits): the verb is the method's
+    if "." in name and _tool_verb_class(name.rsplit(".", 1)[1]) == "read":
+        return
+    args = action.get("arguments") if isinstance(action.get("arguments"), dict) else {}
+    for k, v in args.items():
+        # an SAP display transaction (XK03, MM03, VA03, FB03: the 03 of the create/change/display triple)
+        if str(k).lower() in ("tcode", "transaction", "transaction_code") and isinstance(v, str) \
+                and re.fullmatch(r"[A-Za-z]{2,4}03", v.strip()):
+            return
+        if str(k).lower() in _OPERATION_KEYS and isinstance(v, str):
+            words = {w.lower() for w in re.split(r"[_\-.\s/]+|(?<=[a-z])(?=[A-Z])", v) if w}
+            if words & TOOL_READ_VERBS and not words & _OPERATION_WRITE_WORDS:
+                return
+    rec["tool_changes"] = True
 
 
 def _workspace_wipe(action: dict, rec: dict, config: Config) -> None:
