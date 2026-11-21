@@ -2785,6 +2785,16 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppress|mute|silence)_\w+$", re.I)
+# (v0.1.95, RULE-MINE-03 rounds 7 to 9: bypass_fee=true, checksum_bypass=true, ignore_track_occupancy=true,
+# ignore_min_purchase=true were allowed) a bypass, skip or ignore key set to true turns off whatever it names, except
+# the names of switches that only change what is read or kept (a cache, empty rows, the letter case, missing files) and
+# the S3 settings whose own name is the protection (ignore_public_acls=true blocks public access)
+_ANY_OFF_KEY = re.compile(r"^(?:bypass|skip|ignore)_\w+$|^\w+_bypass(?:ed)?$|^bypass$", re.I)
+_BENIGN_OFF_KEY = re.compile(r"(?:^|_)(?:cache\w*|cached|public_?acls?|public_?policy|unavailable|errors?|query\w*|"
+                             r"scripts|empty\w*|blanks?|case|whitespace|headers?|hidden|missing\w*|existing|"
+                             r"duplicates?|dupes|not_?found|if_?exists|comments?|intro|preview|cleanup|"
+                             r"unchanged|unknown\w*|nulls?|deleted|archived|drafts?|weekends?|holidays?|"
+                             r"first_?row|rows?|lines?|bom|symlinks?|binary|whitespace\w*)$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
 # value, an override that is set turns the check it overrides off, unless it is set to false or empty.
 _OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$|"
@@ -2836,7 +2846,9 @@ _READ_SAFEGUARD_RE = re.compile(r"^include_|^show_|anonymi|pseudonymi|mask|redac
 FALSE = {False, "false", "no", "off", "0", "disabled", "none", 0}
 # A check set by a word that says it was not done (v0.1.67: biometric_scan="bypassed", id_check="skipped" were allowed)
 _SKIPPED = FALSE | {"bypassed", "bypass", "skipped", "skip", "ignored", "ignore", "waived", "not_required",
-                    "not required", "overridden", "override", "suppressed", "muted"}
+                    "not required", "overridden", "override", "suppressed", "muted",
+                    # (v0.1.95, RULE-MINE-03: versioningConfiguration status=Suspended) a protection put on hold
+                    "suspended", "paused"}
 # A visibility or sharing setting opened to everyone (v0.1.67: schedule_meeting visibility=public was allowed)
 _VISIBILITY_KEY = re.compile(r"^(?:visibility|privacy|access|access_?level|sharing|share_?with|shared_?with|acl|"
                              r"audience_?scope|link_?sharing|general_?access|link_?access|link_?visibility|"
@@ -2996,6 +3008,8 @@ def _checks_off(arguments, depth=0, out=None):
                     out.append(k2)
                 elif _OPEN_KEY.match(k2) and vv in TRUE:
                     out.append(k2)
+                elif _ANY_OFF_KEY.match(k2) and vv in TRUE and not _BENIGN_OFF_KEY.search(k2):
+                    out.append(k2)
                 elif _OVERRIDE_KEY.match(k2) and vv not in FALSE and vv not in ("", None) and not k2.startswith(
                         ("consent_", "approval_")):
                     out.append(k2)
@@ -3003,6 +3017,14 @@ def _checks_off(arguments, depth=0, out=None):
                     out.append(k2)
                 elif _DEST_KEY.match(k2) and isinstance(vv, str) and _PUBLIC_NAME_RE.search(vv):
                     out.append(f"{k2}={vv}")
+            # (v0.1.95, RULE-MINE-03: versioningConfiguration={"status": "Suspended"}) a protection's state given
+            # under its own name
+            if isinstance(v, dict) and _CHECK_KEY.search(k2):
+                for sk, sv in v.items():
+                    svv = sv.strip().lower() if isinstance(sv, str) else sv
+                    if str(sk).lower() in ("status", "state", "enabled", "enable", "active") and \
+                            not isinstance(sv, (dict, list)) and svv in _SKIPPED:
+                        out.append(f"{k2}.{str(sk).lower()}={sv}")
             _checks_off(v, depth + 1, out)
     elif isinstance(arguments, list):
         for v in arguments:
