@@ -24,6 +24,34 @@ def _acct(v) -> str:
     return re.sub(r"\s+", "", str(v)).strip("'\"").upper()
 
 
+
+# v0.1.94 (PSA #7812, GATE-READONLY-01): a request that only asks to read. Closed word lists, whole words, lower case.
+_READ_WORDS = frozenset("""summarize summarise summary check list show find review read report look lookup view display
+what which how why when where status explain describe analyze analyse inspect audit verify compare count search
+examine""".split())
+_WRITE_WORDS = frozenset("""add create update change set edit modify delete remove cancel send email post publish share
+grant revoke approve reject pay refund transfer move rename restore revert reset disable enable install deploy run
+execute fix apply schedule book invite assign close open submit upload write draft merge push commit rotate renew
+replace mark archive lock unlock start stop restart trigger refresh sync import export generate prepare make configure
+setup migrate backup sign file order buy sell clean purge flush kill block allow unblock suspend resume increase
+decrease raise lower adjust process handle resolve complete finish accept decline notify message reply forward call
+text save store copy truncate drop wipe destroy erase terminate invalidate provision rollback scale reboot
+shutdown patch retry rerun escalate take upgrade downgrade attach detach mount unmount enroll link unlink""".split())
+_WORD_RE = re.compile(r"[a-z]+")
+
+
+def request_read_only(messages) -> bool:
+    """True when there is at least one user message and every one asks only to read: a read word, no write word."""
+    msgs = [m for m in (messages or []) if (m or "").strip()]
+    if not msgs:
+        return False
+    for m in msgs:
+        words = set(_WORD_RE.findall(m.lower()))
+        if not (words & _READ_WORDS) or (words & _WRITE_WORDS):
+            return False
+    return True
+
+
 @dataclass
 class Session:
     """What happened so far in one agent session.
@@ -318,6 +346,7 @@ class Session:
                 for t in record.get("payment_targets", []) for ref in record.get("payment_refs", [])),
             "asset_writes_in_session": max([self.asset_writes.get(a, 0) for a in record.get("assets", [])] or [0]),
             "tool_definition_changed": self.tool_changed(record.get("tool_name", "")),
+            "request_read_only": request_read_only(self.user_messages),
             "reads_fetched": any(self._under_fetched(p) for p in self._touched(record)),
             "reads_outside_scope_unnamed": any(not self._named(p) for p in record.get("outside_scope_paths", [])),
             # v0.1.74: a write or a deletion outside the writable roots in a folder the user's request does not name
