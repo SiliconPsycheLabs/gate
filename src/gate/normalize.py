@@ -2572,13 +2572,20 @@ _SECRET_KEY_RE = re.compile(
     # one-time, backup and recovery codes, and PINs (v0.1.66: mfa_code=99-221-558 read from a page was allowed)
     r"mfa_?code|mfa_?secret|otp|totp|otp_?code|backup_?codes?|recovery_?codes?|pin|pin_?code|"
     r"credentials?|authorization|auth_?token|bearer|passphrase|session_?cookie|cookie|encryption_?key|signing_?key|"
-    r"auth_?header|card_?number|cvv|cvc)(?:$|_)|^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
+    r"auth_?header|card_?number|cvv|cvc|"
+    # (v0.1.96, RULE-MINE-03 round 9: fetch_archive auth_pass=..., list_dns_records header_auth=..., a wallet's seed
+    # phrase in export metadata) a password named short, an auth header, a wallet's recovery words or key
+    r"pass|header_?auth|mnemonic|seed_?phrase|seed_?words|recovery_?phrase|wif)(?:$|_)|"
+    r"^dd-(?:api|application)-key$|^x-api-key$", re.IGNORECASE)
 # A key that names a secret but holds something about it, not the secret itself: credentials_ref=prod-db-creds,
 # password_hint=..., token_expiry=..., card_last4=... A secret's name or id (secret_name, secret_id) stays listed: a call
 # addressed to a named secret touches that secret.
 _SECRET_META_KEY_RE = re.compile(
     r"(?:^|_)(?:ref|reference|hint|length|policy|expiry|expires|expiration|ttl|last4|last_?four|required|enabled|"
-    r"provider|url|uri|count|delivery|method|channel)$",
+    r"provider|url|uri|count|delivery|method|channel)$|"
+    # (v0.1.96) a file or a list of candidate passwords (hydra pass_file=rockyou.txt), not the secret itself; a
+    # boarding pass
+    r"(?:^|_)(?:pass|passwd|password)_?(?:file|list|wordlist)s?$|^boarding_?pass",
     re.IGNORECASE)
 _SECRET_REF_RE = re.compile(r"^\s*(?:\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:\S+|\{\{.*\}\}|<[^>]*>|\*+|x+|redacted)\s*$",
                             re.IGNORECASE)
@@ -2789,7 +2796,8 @@ _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppr
 # ignore_min_purchase=true were allowed) a bypass, skip or ignore key set to true turns off whatever it names, except
 # the names of switches that only change what is read or kept (a cache, empty rows, the letter case, missing files) and
 # the S3 settings whose own name is the protection (ignore_public_acls=true blocks public access)
-_ANY_OFF_KEY = re.compile(r"^(?:bypass|skip|ignore)_\w+$|^\w+_bypass(?:ed)?$|^bypass$", re.I)
+# (v0.1.96, RULE-MINE-03 round 9: set_route override_occupancy=true, override_capacity=true) an override set to true
+_ANY_OFF_KEY = re.compile(r"^(?:bypass|skip|ignore|override)_\w+$|^\w+_bypass(?:ed)?$|^bypass$", re.I)
 _BENIGN_OFF_KEY = re.compile(r"(?:^|_)(?:cache\w*|cached|public_?acls?|public_?policy|unavailable|errors?|query\w*|"
                              r"scripts|empty\w*|blanks?|case|whitespace|headers?|hidden|missing\w*|existing|"
                              r"duplicates?|dupes|not_?found|if_?exists|comments?|intro|preview|cleanup|"
@@ -2889,7 +2897,10 @@ _SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "featur
                       "sensor", "sensor_id", "component", "function", "channel", "service_name", "service",
                       "setting_key", "setting_name", "config_key", "flag_name", "feature_flag", "param_name",
                       "option_name", "parameter_name", "bit", "bit_name", "point", "point_name", "alarm_id", "alarm",
-                      "alarm_name", "alert_id", "alert_name", "interlock_id")
+                      "alarm_name", "alert_id", "alert_name", "interlock_id",
+                      # (v0.1.96, RULE-MINE-03 round 9: flag_id=gdpr_retention_marketing_db enabled=false) a feature
+                      # flag named by its id
+                      "flag_id", "flag_key", "feature_id", "feature_key", "feature_name", "toggle", "toggle_name")
 _SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "enable", "active", "new_value", "setting_value")
 
 
@@ -2972,7 +2983,9 @@ def _checks_off(arguments, depth=0, out=None):
         if pair:
             # only a pair that names a check counts (2fa_enabled=false, E_STOP_MONITORING=DISABLED); an environment
             # variable set as a pair (key=DEBUG_MODE value=true) is a setting the user asks for, not a check off
-            out.extend(k for k in _checks_off(pair, depth + 1, []) if _CHECK_KEY.search(k))
+            # (v0.1.96) a verbose or debug output switch is not a check (flag_key=verbose_logging enabled=false)
+            out.extend(k for k in _checks_off(pair, depth + 1, []) if _CHECK_KEY.search(k)
+                       and not re.match(r"(?:verbose|debug)", k))
         for k, v in arguments.items():
             k2 = str(k).lower().replace("-", "_")
             vv = v.strip().lower() if isinstance(v, str) else v
