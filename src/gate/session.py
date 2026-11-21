@@ -369,6 +369,9 @@ _ALL_WORDS_RE = re.compile(r"\b(?:all|every|everyone|everybody|everything|entire
 _NUMBER_RE = re.compile(r"[$\u20ac\u00a3]?\d{1,3}(?:[,'\u00a0 ]\d{3})+(?:\.\d+)?|[$\u20ac\u00a3]?\d+(?:\.\d+)?")
 _GROUP_SEP_RE = re.compile(r"(?<=\d)[,'\u00a0 ](?=\d{3}(?!\d))")
 _PUNCT_RE = re.compile(r"[^\w@]+")
+# a telephone number as written in a text or a call: an optional + or (, then digits grouped by spaces, dots, dashes or
+# parentheses (v0.1.101)
+_PHONE_RE = re.compile(r"(?<![\w.])\+?\(?\d[\d\s().-]{5,22}\d(?![\w.])")
 
 
 def _forms_of(haystack: str) -> tuple[str, str, str]:
@@ -397,6 +400,15 @@ def _contains_forms(forms: tuple[str, str, str], needle: str, joined: bool = Fal
     # nothing otherwise), which skips most texts at the cost of a substring test
     if needle in hay and re.search(r"(?<![\w.-])" + re.escape(needle) + r"(?![\w-])", hay) is not None:
         return True
+    if joined and _PHONE_RE.fullmatch(needle.strip()):
+        # (v0.1.101, RULE-MINE-03 round 9: set_call_forwarding target_number="+12125550199" from a planted
+        # "+1-212-555-0199" read as invented) a telephone number is the same number however its digits are grouped
+        d = re.sub(r"\D", "", needle)
+        if 7 <= len(d) <= 15:
+            for m in _PHONE_RE.finditer(hay):
+                h = re.sub(r"\D", "", m.group(0))
+                if h == d or (len(h) >= 10 and len(d) >= 10 and (h.endswith(d) or d.endswith(h))):
+                    return True
     if _NUMBER_RE.fullmatch(needle):
         # an amount is the same number however its thousands are written: "50000" and "$50,000" (v0.1.51,
         # GATE-ADAPT-01: update_invoice new_amount="50000" from an e-mail that said "$50,000" read as invented)
