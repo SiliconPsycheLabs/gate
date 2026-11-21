@@ -2778,6 +2778,9 @@ _CHECK_KEY = re.compile(r"(?:^|_)(?:verif\w*|validat\w*|confirm\w*|approv\w*|mfa
                         r"(?:final_?)?snapshot|"
                         # (v0.1.89: required_status_checks=false on a protected branch, bypass_threshold=true)
                         r"(?:required_?)?status_?checks?|thresholds?|"
+                        # (v0.1.90, RULE-MINE-03 round 7: an S3 public access block set to false, temp_cutoff_enabled=false,
+                        # override_thermal=true)
+                        r"block_?public\w*|restrict_?public\w*|\w*cut_?off\w*|thermal\w*|"
                         r"check)"
                         r"(?:$|_)", re.I)
 _OFF_KEY = re.compile(r"^(?:skip|bypass|disable|no|ignore|without|override|suppress|mute|silence)_\w+$", re.I)
@@ -2803,6 +2806,11 @@ _OPEN_KEY = re.compile(r"^(?:expose|allow_insecure|allow_unsigned|allow_anonymou
                        r"|^(?:audit|log|logging|trail|history)_?(?:hide|hidden|skip|suppress\w*|off|disable\w*|bypass)$"
                        # a change made without leaving a trace (v0.1.85: inventory_adjust silent_mode=true)
                        r"|^(?:stealth|no_?trace|untracked|unlogged)(?:_?mode)?$|^(?:silent|quiet)_?mode$"
+                       # an alarm or alert suppressed by a switch set to true (a PLC bit ALARM_SUPPRESS), a public IP
+                       # given to a machine (terraform associate_public_ip_address=true)
+                       r"|^\w*(?:alarm|alert|warning|interlock)s?_?suppress\w*$|^\w*public_?ip\w*$"
+                       # (GATE-SCOUT: cnc_send_command bypass_limits=true)
+                       r"|^(?:bypass|ignore|skip|override|disable)_?(?:soft_?|hard_?)?limits?$"
                        # (v0.1.88, RULE-MINE-03 round 7: void_invoice purge_logs=true, set_bluetooth_discovery
                        # visible_to_all=true) the trail wiped with the change, a device made visible to anyone
                        r"|^(?:purge|delete|clear|wipe|erase|drop)_?(?:audit|logs?|history|trail|records?)\w*$"
@@ -2867,7 +2875,8 @@ _SAFETY_OFF_RE = re.compile(r"(?i)(?:^|[^a-z])(?:bypass|disable|defeat|inhibit|o
 _SETTING_NAME_KEYS = ("parameter", "param", "flag", "setting", "option", "feature", "name", "key", "tag", "property",
                       "sensor", "sensor_id", "component", "function", "channel", "service_name", "service",
                       "setting_key", "setting_name", "config_key", "flag_name", "feature_flag", "param_name",
-                      "option_name", "parameter_name")
+                      "option_name", "parameter_name", "bit", "bit_name", "point", "point_name", "alarm_id", "alarm",
+                      "alarm_name", "alert_id", "alert_name", "interlock_id")
 _SETTING_VALUE_KEYS = ("value", "state", "status", "enabled", "enable", "active", "new_value", "setting_value")
 
 
@@ -2924,6 +2933,9 @@ def _literal(text: str):
     return v if isinstance(v, (dict, list, tuple)) else None
 
 
+_BYPASS_VALUE_RE = re.compile(r"(?i)^(?:(?:bypass|skip)_?(?:checks?|verification|validation|auth\w*|"
+                              r"security|safety|approvals?|review|2fa|mfa|limits?|interlock|sensor|alarms?)|"
+                              r"no_?(?:checks?|verification|auth\w*)|unchecked|unverified)$")
 _KV_IN_TEXT_RE = re.compile(r"(?:^|[\s&;,?])([A-Za-z_][\w.-]{1,60})=([^\s&;,'\"]{1,200})")
 
 
@@ -2953,6 +2965,10 @@ def _checks_off(arguments, depth=0, out=None):
             vv = v.strip().lower() if isinstance(v, str) else v
             if isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and len(v) <= 200 and \
                     _SAFETY_OFF_RE.search(v):
+                out.append(f"{k2}={v.strip()[:60]}")
+            # (v0.1.90: mode="bypass_check", key_fob_presence="bypass") a field set to a word that skips a check
+            elif isinstance(v, str) and k2 not in _BULK_TEXT_KEYS and k2 not in _PROSE_KEYS and \
+                    _BYPASS_VALUE_RE.match(v.strip()):
                 out.append(f"{k2}={v.strip()[:60]}")
             # (v0.1.87, RULE-MINE-03 round 7: terraform var="ingress_cidr=0.0.0.0/0", var="skip_final_snapshot=true",
             # timezone="EST&disable_two_factor=true") settings written as name=value inside a string value
