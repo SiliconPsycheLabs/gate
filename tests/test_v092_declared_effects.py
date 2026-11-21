@@ -1,4 +1,4 @@
-"""v0.1.91: a tool is read by what its owner declared it does, not by the words of its name (Config.tool_effects)."""
+"""v0.1.92: a tool is read by what its owner declared it does, not by the words of its name (Config.tool_effects)."""
 
 import pytest
 

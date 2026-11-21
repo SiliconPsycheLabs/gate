@@ -338,7 +338,18 @@ Signing and checking signatures need `pip install "splabs-gate[signing]"`.
   the output of a tool declared internal (matched on the tool id given with the output, like `trusted_tools`). With
   no internal source declared none of these is computed. The engine reads the session's history and the action
   object, never the content, so a rule on these holds when the model rewords the data.
-- `Config.tool_effects` (v0.1.91): what each tool does, declared by its owner: a dict of pattern on the tool name to
+- `Config.collect_accounts` and `Config.self_ids` (v0.1.91): the owner's own accounts, where money owed to it is
+  collected, and the identities of the agent itself or of the person it acts as. Session facts: `bank_values_own` (every
+  bank value the action writes is a collecting account: an invoice that tells a customer where to pay is not a change
+  of a payee's bank details, and does not mark the session as having changed one) and `targets_self` (the action names
+  one of the agent's own identities, as a pay change for itself would). A bank change is remembered per payee
+  (`payment_to_changed_payee`: a payment to an account or a payee, by the name of its argument such as `vendor_id`,
+  whose bank details changed in this session; record field `payee_ids`); `bank_changed_in_session` is unchanged. A
+  payment's record carries the documents it cites (`payment_refs`: `INV-21`, `TND-1`) and its amount
+  (`payment_amount`); the session fact `payment_repeats_session` is true when a payment that ran in the session had
+  the same destination, amount and document. `in_trusted_records` lists the action's values found in the output of a
+  `trusted_tools` tool even when an outside text also holds them (`from_trusted` keeps its meaning: first seen there).
+- `Config.tool_effects` (v0.1.92): what each tool does, declared by its owner: a dict of pattern on the tool name to
   an effect or a list of effects, from a closed set (`read`, `write`, `send`, `money`, `delete`, `grant`, `publish`,
   `physical`, `execute`, `config`). With it a tool call is read by what was declared, not by the words of its name:
   the record carries `declared_effects`, `tool_verb_class` is `read` only for a tool declared to read and nothing
