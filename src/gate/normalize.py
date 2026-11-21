@@ -6,6 +6,7 @@ errors is treated as a denial by the checker, never skipped.
 
 from __future__ import annotations
 
+from ._bip39 import WORDS as _BIP39
 import ast
 import fnmatch
 import json
@@ -2659,6 +2660,16 @@ def _secret_values(arguments) -> list[str]:
             x = a.strip()
             if not x or len(x) > 4000 or _SECRET_REF_RE.match(x):
                 return
+            # (v0.1.97, RULE-MINE-03 round 9: seed="abandon ability able ...", filter="recovery:glory frost ...") a
+            # wallet's recovery phrase: twelve or more BIP-39 words in a row, under any key
+            run = []
+            for w in re.split(r"[^a-z]+", x.lower()) + [""]:
+                if w in _BIP39:
+                    run.append(w)
+                    continue
+                if len(run) >= 12:
+                    out.add(" ".join(run)[:200])
+                run = []
             m = _SECRET_SHAPE_RE.search(x)
             while m and m.group("card") and not _luhn(m.group("card")):
                 m = _SECRET_SHAPE_RE.search(x, m.end())
@@ -2805,7 +2816,8 @@ _BENIGN_OFF_KEY = re.compile(r"(?:^|_)(?:cache\w*|cached|public_?acls?|public_?p
                              r"first_?row|rows?|lines?|bom|symlinks?|binary|whitespace\w*)$", re.I)
 # An override key given a value (v0.1.68: list_categories admin_override="RootAccess123" was allowed): whatever the
 # value, an override that is set turns the check it overrides off, unless it is set to false or empty.
-_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$|"
+# (v0.1.97: direct_credit bypass_key="INTERNAL_SKIP_99") a bypass key or code given a value
+_OVERRIDE_KEY = re.compile(r"^\w+_override$|^override$|^debug_?key$|^backdoor\w*$|^bypass_?(?:key|code|token)$|"
                            r"^override_(?:auth\w*|approv\w*|check\w*|verif\w*|security|policy|limit\w*|token|code|key)$",
                            re.I)
 # A flag that opens what is closed by default: expose_secrets=true, allow_insecure_secrets=true, public_access=true
