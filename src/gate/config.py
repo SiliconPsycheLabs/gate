@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import fnmatch
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -19,6 +21,10 @@ DEFAULT_REGISTRIES = {
 
 
 DEFAULT_MODEL_PATHS = ["~/.cache/huggingface", "~/.cache/torch/hub", "~/.ollama/models", "~/.cache/lm-studio/models"]
+
+
+# What a tool can be declared to do (Config.tool_effects). A closed set: a rule reads these words and no others.
+TOOL_EFFECTS = ("read", "write", "send", "money", "delete", "grant", "publish", "physical", "execute", "config")
 
 
 @dataclass
@@ -56,6 +62,17 @@ class Config:
         "mcp__crm__*"). When set, a call to any other tool is marked in the record: a tool that appeared in the
         agent's tool list without the owner putting it there (a poisoned MCP server, a planted plugin) does not run on
         its own. Default none: every tool may be called.
+    tool_effects: what each tool does, declared by its owner (v0.1.92): a dict of pattern on the tool name ->
+        effect or list of effects, from the closed set TOOL_EFFECTS: "read" (reads, changes nothing, nothing leaves),
+        "write" (changes the owner's own data), "send" (something leaves to someone else: a message, an upload, a
+        post), "money" (moves money or commits to pay), "delete" (destroys data or a resource), "grant" (changes who
+        can reach what), "publish" (makes something public), "physical" (acts on a machine or on the world),
+        "execute" (runs code or a command it is given), "config" (changes a setting, a safeguard, the agent itself).
+        When set, a tool call is read by what its owner declared, not by the words of its name: the record carries
+        declared_effects, tool_verb_class is "read" only for a tool declared read and nothing else, and a tool no
+        entry describes (or whose entry holds a word outside the set, or nothing) is marked effect_undeclared, so
+        it does not run on its own. A tool that matches several patterns has the effects of all of them. Default
+        none: tools are read by their names, as before.
     assets: the owner's register of machines and machine-side targets (PSA #7802). Each entry is a dict:
         {"match": "<pattern or list of patterns on asset ids>", "class": "production" | "safety" | "lab" | ...,
          "min": <int>, "max": <int>, "max_writes": <int>}. Asset ids are "<domain>:<target>" as the record names them
@@ -99,6 +116,7 @@ class Config:
     collect_accounts: list[str] = field(default_factory=list)
     self_ids: list[str] = field(default_factory=list)
     declared_tools: list[str] = field(default_factory=list)
+    tool_effects: dict = field(default_factory=dict)
     assets: list[dict] = field(default_factory=list)
     money_limit: int = 0
     contract: dict | None = None
@@ -136,6 +154,22 @@ class Config:
                 return True
         return False
 
+    def declared_effects(self, *names: str) -> list[str] | None:
+        """What the owner declared a tool does: the effects of every entry of tool_effects whose pattern matches one
+        of the names (the full name, the name without its server). None when no entry matches, when a matching entry
+        is empty or holds a word outside TOOL_EFFECTS: an unreadable declaration is no declaration."""
+        found: set[str] = set()
+        matched = False
+        for pattern, effects in (self.tool_effects or {}).items():
+            if not any(fnmatch.fnmatch(n, str(pattern)) for n in names if n):
+                continue
+            effects = [effects] if isinstance(effects, str) else list(effects or []) if isinstance(effects, (list, tuple, set)) else []
+            if not effects or any(not isinstance(e, str) or e not in TOOL_EFFECTS for e in effects):
+                return None
+            matched = True
+            found |= set(effects)
+        return sorted(found) if matched else None
+
     def to_context(self) -> dict:
         return {
             "workspace": str(self.workspace_path),
@@ -147,6 +181,7 @@ class Config:
             "assets_registered": bool(self.assets),
             "money_limit": int(self.money_limit or 0),
             "contract_declared": bool(self.contract),
+            "effects_declared": bool(self.tool_effects),
             "off_limits_declared": bool(self.off_limits),
             "internal_declared": bool(self.internal_sources),
         }

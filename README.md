@@ -349,6 +349,14 @@ Signing and checking signatures need `pip install "splabs-gate[signing]"`.
   (`payment_amount`); the session fact `payment_repeats_session` is true when a payment that ran in the session had
   the same destination, amount and document. `in_trusted_records` lists the action's values found in the output of a
   `trusted_tools` tool even when an outside text also holds them (`from_trusted` keeps its meaning: first seen there).
+- `Config.tool_effects` (v0.1.92): what each tool does, declared by its owner: a dict of pattern on the tool name to
+  an effect or a list of effects, from a closed set (`read`, `write`, `send`, `money`, `delete`, `grant`, `publish`,
+  `physical`, `execute`, `config`). With it a tool call is read by what was declared, not by the words of its name:
+  the record carries `declared_effects`, `tool_verb_class` is `read` only for a tool declared to read and nothing
+  else, and a tool that no entry describes (or whose entry is empty or holds another word) is marked
+  `effect_undeclared`, so a rule can hold it for a person. A name can be anything (`op_17`, `raise_requisition`);
+  the declaration cannot be reworded by the model or by a text it read. `context.config.effects_declared` tells a
+  rule that the owner declared effects. With none declared, tools are read by their names, as before.
 - Provenance of files (v0.1.70): the session keeps the paths an action reaching the network wrote or named (a
   download, a clone, code with a download call) and what was made from them (an archive unpacked, a copy); session
   facts `reads_fetched` and `reads_fetched_eval` (an evaluation's tests, solution, grader or expected outputs among
