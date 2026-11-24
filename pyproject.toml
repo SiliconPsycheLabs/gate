@@ -4,24 +4,28 @@ build-backend = "hatchling.build"
 
 [project]
 name = "splabs-gate"
-version = "0.1.101"
-description = "A deterministic gate for the actions of AI agents: normalise every action, check it against Cedar rules, allow, deny or hold for a person."
+dynamic = ["version"]
+description = "A deterministic gate for the actions of AI agents: the rules are a table, one engine reads it, and every action passes or does not pass."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [{ name = "Silicon Psyche Labs" }]
-dependencies = ["cedarpy>=4.8", "bashlex>=0.18"]
-keywords = ["agents", "llm", "security", "policy", "cedar", "tool-calling"]
+dependencies = ["cel-python>=0.5", "sqlglot>=30", "bashlex>=0.18", "packaging>=23"]
+keywords = ["agents", "llm", "security", "policy", "tool-calling", "mcp"]
+
+[project.urls]
+Homepage = "https://splabs.io/products/gate"
+Documentation = "https://splabs.io/manual/gate"
+Changelog = "https://splabs.io/changelog"
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "cryptography>=41"]
-signing = ["cryptography>=41"]
+dev = ["pytest>=7"]
 
-[project.scripts]
-gate = "gate.cli:main"
+[tool.hatch.version]
+path = "gate_table/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gate"]
+packages = ["gate_table"]
 
-[tool.pytest.ini_options]
-pythonpath = ["src"]
+[tool.hatch.build.targets.sdist]
+include = ["gate_table", "examples", "tests", "docs", "README.md", "LICENSE"]

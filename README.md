@@ -2,15 +2,65 @@
 
 A deterministic gate for the actions of AI agents, from [Silicon Psyche Labs](https://splabs.io). Apache-2.0.
 
-> **The code in this repository is the previous engine (v0.1.x, last tag `v0.1.101`), retired on 24 November 2026.**
-> Its hosted service (`/api/gate/v1`) and its rule packs are switched off. The Claude Code plugin in
-> `claude-code-plugin/` can no longer get an answer from the service, and in enforce mode an action it cannot check is
-> refused: if you installed it, remove it (`/plugin uninstall splabs-gate@splabs` in Claude Code, or
-> `gate claude-code uninstall` if you installed it with pip). Its documentation is kept in
-> [docs/README-v0.1.md](docs/README-v0.1.md).
->
-> The gate in production is **version 2.0.0**: one engine that reads the rules as tables. It is described below and in
-> the [manual](https://splabs.io/manual/gate); every version is on the [changelog](https://splabs.io/changelog).
+This repository is the engine: one piece of software that reads the rules as tables and holds no rule of its own. It
+is the engine that runs the gate on [splabs.io](https://splabs.io/products/gate); every version is on the
+[changelog](https://splabs.io/changelog). The table format is in [docs/FORMAT.md](docs/FORMAT.md).
+
+> **Coming from v0.1?** The previous engine (Cedar rules, the `gate` command line, the Claude Code plugin) was retired
+> on 24 November 2026 and its hosted service is switched off. If you installed the plugin, remove it
+> (`/plugin uninstall splabs-gate@splabs` in Claude Code, or `gate claude-code uninstall` if you installed it with
+> pip): in enforce mode it refuses every action it can no longer check. Its code is kept at the tag `v0.1.101` and its
+> documentation in [docs/README-v0.1.md](docs/README-v0.1.md).
+
+## Install
+
+```bash
+pip install "git+https://github.com/SiliconPsycheLabs/gate"
+```
+
+Python 3.10 or later. The package is `gate_table`; it needs `cel-python` (expressions), `sqlglot` (SQL), `bashlex`
+(shell) and `packaging` (pip).
+
+## Quick start
+
+A table for a billing agent ([examples/payments.json](examples/payments.json)): it may read invoices and pay a
+validated invoice of up to 5,000; removing a supplier is closed; nothing else is in the menu.
+
+```python
+import json
+from gate_table import manager
+
+table = json.load(open("examples/payments.json"))
+rec, state = manager.decide(table, {"tool": "pay_invoice", "args": {"number": "INV-2"}}, view)
+rec["outcome"], rec["reason"], rec["rule"]
+# ('nopass', 'invoice INV-2 is registered: only a validated invoice is paid', 'pay_invoice#1')
+```
+
+`view` is how the gate reads the company's records: the gate keeps no copy of them. In
+[examples/quickstart.py](examples/quickstart.py) it is a few records in memory; in a company it is a small connector
+next to its own system (the calls it answers are listed in `gate_table/view.py`). Run the example:
+
+```bash
+python examples/quickstart.py
+```
+
+```
+pay_invoice {"number": "INV-1"}
+    passes  (rule: pay_invoice)
+pay_invoice {"number": "INV-2"}
+    does not pass: invoice INV-2 is registered: only a validated invoice is paid  (rule: pay_invoice#1)
+pay_invoice {"number": "INV-3"}
+    does not pass: invoice INV-3 is over 5,000: a person pays it  (rule: pay_invoice#2)
+pay_invoice {"number": "INV-1", "iban": "XX00 0000"}
+    does not pass: field not in the function's form: iban  (rule: form)
+delete_supplier {"id": "S-7"}
+    does not pass: suppliers are removed by a person, not by the agent  (rule: delete_supplier:closed)
+wire_money {"to": "anyone"}
+    does not pass: this function is not in the menu  (rule: menu)
+```
+
+The engine ships no maintained rules: you write your tables, or the hosted gate on splabs.io serves the ones we
+maintain, drawn from what agents actually try.
 
 ## What the gate does
 
@@ -41,7 +91,7 @@ nobody wrote down. If the table cannot be read, or the company's system does not
 Where a rule carries a lock, a person whose role the lock names can open one exact action, once, for one session.
 Nothing waits for a person: the agent asks again, and the decision records who opened it.
 
-## Connecting an agent
+## Connecting an agent to the hosted gate
 
 The service is at `https://splabs.io/api/gate/table/v1`, with a gate key of your account (prefix `psa_gate_`), which
 can ask for decisions and nothing else. Before each action runs, send it:

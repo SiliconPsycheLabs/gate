@@ -1,0 +1,9724 @@
+{
+"about": "Redis 7.0.15: its own description of every command (COMMAND), as data. Not written by us.",
+"commands": {
+"acl": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"acl|cat": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|deluser": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|dryrun": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|genpass": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|getuser": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|list": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|load": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|log": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|save": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|setuser": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|users": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"acl|whoami": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"append": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"asking": {
+"arity": 1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"auth": {
+"arity": -2,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"no_auth",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"bgrewriteaof": {
+"arity": 1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"bgsave": {
+"arity": -1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"bitcount": {
+"arity": -2,
+"categories": [
+"@read",
+"@bitmap",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"bitfield": {
+"arity": -2,
+"categories": [
+"@write",
+"@bitmap",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update",
+"variable_flags"
+],
+"notes": "This command allows both access and modification of the key"
+}
+],
+"sub": {}
+},
+"bitfield_ro": {
+"arity": -2,
+"categories": [
+"@read",
+"@bitmap",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"bitop": {
+"arity": -4,
+"categories": [
+"@write",
+"@bitmap",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 3
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"bitpos": {
+"arity": -3,
+"categories": [
+"@read",
+"@bitmap",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"blmove": {
+"arity": 6,
+"categories": [
+"@write",
+"@list",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"denyoom",
+"noscript",
+"blocking"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"blmpop": {
+"arity": -5,
+"categories": [
+"@write",
+"@list",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"blocking",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"blpop": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"noscript",
+"blocking"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -2,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"brpop": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"noscript",
+"blocking"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -2,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"brpoplpush": {
+"arity": 4,
+"categories": [
+"@write",
+"@list",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"denyoom",
+"noscript",
+"blocking"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"bzmpop": {
+"arity": -5,
+"categories": [
+"@write",
+"@sortedset",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"blocking",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"bzpopmax": {
+"arity": -3,
+"categories": [
+"@write",
+"@sortedset",
+"@fast",
+"@blocking"
+],
+"flags": [
+"write",
+"noscript",
+"blocking",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -2,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"bzpopmin": {
+"arity": -3,
+"categories": [
+"@write",
+"@sortedset",
+"@fast",
+"@blocking"
+],
+"flags": [
+"write",
+"noscript",
+"blocking",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -2,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"client": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"client|caching": {
+"arity": 3,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|getname": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|getredir": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|help": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|id": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|info": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|kill": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|list": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|no-evict": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|pause": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|reply": {
+"arity": 3,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|setname": {
+"arity": 3,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|tracking": {
+"arity": -3,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|trackinginfo": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|unblock": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"client|unpause": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous",
+"@connection"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"cluster": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"cluster|addslots": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|addslotsrange": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|bumpepoch": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|count-failure-reports": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|countkeysinslot": {
+"arity": 3,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|delslots": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|delslotsrange": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|failover": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|flushslots": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|forget": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|getkeysinslot": {
+"arity": 4,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|info": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|keyslot": {
+"arity": 3,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|links": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|meet": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|myid": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|nodes": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|replicas": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|replicate": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|reset": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|saveconfig": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|set-config-epoch": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|setslot": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|shards": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|slaves": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"cluster|slots": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"command": {
+"arity": -1,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {
+"command|count": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|docs": {
+"arity": -2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|getkeys": {
+"arity": -4,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|getkeysandflags": {
+"arity": -4,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|help": {
+"arity": 2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|info": {
+"arity": -2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"command|list": {
+"arity": -2,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"config": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"config|get": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"config|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"config|resetstat": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"config|rewrite": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"config|set": {
+"arity": -4,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"copy": {
+"arity": -3,
+"categories": [
+"@keyspace",
+"@write",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"dbsize": {
+"arity": 1,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"debug": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"decr": {
+"arity": 2,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"decrby": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"del": {
+"arity": -2,
+"categories": [
+"@keyspace",
+"@write",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RM",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"discard": {
+"arity": 1,
+"categories": [
+"@fast",
+"@transaction"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"dump": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"echo": {
+"arity": 2,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"eval": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"update"
+],
+"notes": "We cannot tell how the keys will be used so we assume the worst, RW and UPDATE"
+}
+],
+"sub": {}
+},
+"eval_ro": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"readonly",
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+],
+"notes": "We cannot tell how the keys will be used so we assume the worst, RO and ACCESS"
+}
+],
+"sub": {}
+},
+"evalsha": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"evalsha_ro": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"readonly",
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"exec": {
+"arity": 1,
+"categories": [
+"@slow",
+"@transaction"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"skip_slowlog"
+],
+"keys": [],
+"sub": {}
+},
+"exists": {
+"arity": -2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"expire": {
+"arity": -3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"expireat": {
+"arity": -3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"expiretime": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"failover": {
+"arity": -1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"fcall": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"update"
+],
+"notes": "We cannot tell how the keys will be used so we assume the worst, RW and UPDATE"
+}
+],
+"sub": {}
+},
+"fcall_ro": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"readonly",
+"noscript",
+"stale",
+"skip_monitor",
+"no_mandatory_keys",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+],
+"notes": "We cannot tell how the keys will be used so we assume the worst, RO and ACCESS"
+}
+],
+"sub": {}
+},
+"flushall": {
+"arity": -1,
+"categories": [
+"@keyspace",
+"@write",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write"
+],
+"keys": [],
+"sub": {}
+},
+"flushdb": {
+"arity": -1,
+"categories": [
+"@keyspace",
+"@write",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write"
+],
+"keys": [],
+"sub": {}
+},
+"function": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"function|delete": {
+"arity": 3,
+"categories": [
+"@write",
+"@slow",
+"@scripting"
+],
+"flags": [
+"write",
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|dump": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|flush": {
+"arity": -2,
+"categories": [
+"@write",
+"@slow",
+"@scripting"
+],
+"flags": [
+"write",
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|help": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"function|kill": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"function|list": {
+"arity": -2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|load": {
+"arity": -3,
+"categories": [
+"@write",
+"@slow",
+"@scripting"
+],
+"flags": [
+"write",
+"denyoom",
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|restore": {
+"arity": -3,
+"categories": [
+"@write",
+"@slow",
+"@scripting"
+],
+"flags": [
+"write",
+"denyoom",
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"function|stats": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"geoadd": {
+"arity": -5,
+"categories": [
+"@write",
+"@geo",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"geodist": {
+"arity": -4,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"geohash": {
+"arity": -2,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"geopos": {
+"arity": -2,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"georadius": {
+"arity": -6,
+"categories": [
+"@write",
+"@geo",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+},
+{
+"begin_search": {
+"spec": {
+"keyword": "STORE",
+"startfrom": 6
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"keyword": "STOREDIST",
+"startfrom": 6
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"georadius_ro": {
+"arity": -6,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"georadiusbymember": {
+"arity": -5,
+"categories": [
+"@write",
+"@geo",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+},
+{
+"begin_search": {
+"spec": {
+"keyword": "STORE",
+"startfrom": 5
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"keyword": "STOREDIST",
+"startfrom": 5
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"georadiusbymember_ro": {
+"arity": -5,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"geosearch": {
+"arity": -7,
+"categories": [
+"@read",
+"@geo",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"geosearchstore": {
+"arity": -8,
+"categories": [
+"@write",
+"@geo",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"get": {
+"arity": 2,
+"categories": [
+"@read",
+"@string",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"getbit": {
+"arity": 3,
+"categories": [
+"@read",
+"@bitmap",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"getdel": {
+"arity": 2,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"getex": {
+"arity": -2,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+],
+"notes": "RW and UPDATE because it changes the TTL"
+}
+],
+"sub": {}
+},
+"getrange": {
+"arity": 4,
+"categories": [
+"@read",
+"@string",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"getset": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"hdel": {
+"arity": -3,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"hello": {
+"arity": -1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"no_auth",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"hexists": {
+"arity": 3,
+"categories": [
+"@read",
+"@hash",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"hget": {
+"arity": 3,
+"categories": [
+"@read",
+"@hash",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hgetall": {
+"arity": 2,
+"categories": [
+"@read",
+"@hash",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hincrby": {
+"arity": 4,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"hincrbyfloat": {
+"arity": 4,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"hkeys": {
+"arity": 2,
+"categories": [
+"@read",
+"@hash",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hlen": {
+"arity": 2,
+"categories": [
+"@read",
+"@hash",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"hmget": {
+"arity": -3,
+"categories": [
+"@read",
+"@hash",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hmset": {
+"arity": -4,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"hrandfield": {
+"arity": -2,
+"categories": [
+"@read",
+"@hash",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hscan": {
+"arity": -3,
+"categories": [
+"@read",
+"@hash",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"hset": {
+"arity": -4,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"hsetnx": {
+"arity": 4,
+"categories": [
+"@write",
+"@hash",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"hstrlen": {
+"arity": 3,
+"categories": [
+"@read",
+"@hash",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"hvals": {
+"arity": 2,
+"categories": [
+"@read",
+"@hash",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"incr": {
+"arity": 2,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"incrby": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"incrbyfloat": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"info": {
+"arity": -1,
+"categories": [
+"@slow",
+"@dangerous"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"keys": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"readonly"
+],
+"keys": [],
+"sub": {}
+},
+"lastsave": {
+"arity": 1,
+"categories": [
+"@admin",
+"@fast",
+"@dangerous"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"latency": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"latency|doctor": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|graph": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|histogram": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|history": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|latest": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"latency|reset": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"lcs": {
+"arity": -3,
+"categories": [
+"@read",
+"@string",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"lindex": {
+"arity": 3,
+"categories": [
+"@read",
+"@list",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"linsert": {
+"arity": 5,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"llen": {
+"arity": 2,
+"categories": [
+"@read",
+"@list",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"lmove": {
+"arity": 5,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"lmpop": {
+"arity": -4,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"lolwut": {
+"arity": -1,
+"categories": [
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"lpop": {
+"arity": -2,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"lpos": {
+"arity": -3,
+"categories": [
+"@read",
+"@list",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"lpush": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"lpushx": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"lrange": {
+"arity": 4,
+"categories": [
+"@read",
+"@list",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"lrem": {
+"arity": 4,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"lset": {
+"arity": 4,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"ltrim": {
+"arity": 4,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"memory": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"memory|doctor": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {}
+},
+"memory|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"memory|malloc-stats": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {}
+},
+"memory|purge": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {}
+},
+"memory|stats": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {}
+},
+"memory|usage": {
+"arity": -3,
+"categories": [
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+}
+}
+},
+"mget": {
+"arity": -2,
+"categories": [
+"@read",
+"@string",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"migrate": {
+"arity": -6,
+"categories": [
+"@keyspace",
+"@write",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 3
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"keyword": "KEYS",
+"startfrom": -2
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete",
+"incomplete"
+]
+}
+],
+"sub": {}
+},
+"module": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"module|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"module|list": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"module|load": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"module|loadex": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"module|unload": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"monitor": {
+"arity": 1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"move": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"mset": {
+"arity": -3,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 2,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"msetnx": {
+"arity": -3,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 2,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"multi": {
+"arity": 1,
+"categories": [
+"@fast",
+"@transaction"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"object": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"object|encoding": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"object|freq": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"object|help": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"object|idletime": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"object|refcount": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+}
+}
+},
+"persist": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"pexpire": {
+"arity": -3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"pexpireat": {
+"arity": -3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"pexpiretime": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"pfadd": {
+"arity": -2,
+"categories": [
+"@write",
+"@hyperloglog",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"pfcount": {
+"arity": -2,
+"categories": [
+"@read",
+"@hyperloglog",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access"
+],
+"notes": "RW because it may change the internal representation of the key, and propagate to replicas"
+}
+],
+"sub": {}
+},
+"pfdebug": {
+"arity": 3,
+"categories": [
+"@write",
+"@hyperloglog",
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write",
+"denyoom",
+"admin"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access"
+]
+}
+],
+"sub": {}
+},
+"pfmerge": {
+"arity": -2,
+"categories": [
+"@write",
+"@hyperloglog",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"insert"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"pfselftest": {
+"arity": 1,
+"categories": [
+"@hyperloglog",
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin"
+],
+"keys": [],
+"sub": {}
+},
+"ping": {
+"arity": -1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"psetex": {
+"arity": 4,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"psubscribe": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"psync": {
+"arity": -3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading",
+"no_multi"
+],
+"keys": [],
+"sub": {}
+},
+"pttl": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"publish": {
+"arity": 3,
+"categories": [
+"@pubsub",
+"@fast"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"pubsub|channels": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub|numpat": {
+"arity": 2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub|numsub": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub|shardchannels": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"pubsub|shardnumsub": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"punsubscribe": {
+"arity": -1,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"quit": {
+"arity": -1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"no_auth",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"randomkey": {
+"arity": 1,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [],
+"sub": {}
+},
+"readonly": {
+"arity": 1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"readwrite": {
+"arity": 1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"rename": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@write",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"renamenx": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"replconf": {
+"arity": -1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"replicaof": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"reset": {
+"arity": 1,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"no_auth",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"restore": {
+"arity": -4,
+"categories": [
+"@keyspace",
+"@write",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"restore-asking": {
+"arity": -4,
+"categories": [
+"@keyspace",
+"@write",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write",
+"denyoom",
+"asking"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"role": {
+"arity": 1,
+"categories": [
+"@admin",
+"@fast",
+"@dangerous"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"rpop": {
+"arity": -2,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"rpoplpush": {
+"arity": 3,
+"categories": [
+"@write",
+"@list",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"rpush": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"rpushx": {
+"arity": -3,
+"categories": [
+"@write",
+"@list",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"sadd": {
+"arity": -3,
+"categories": [
+"@write",
+"@set",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"save": {
+"arity": 1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading",
+"no_multi"
+],
+"keys": [],
+"sub": {}
+},
+"scan": {
+"arity": -2,
+"categories": [
+"@keyspace",
+"@read",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [],
+"sub": {}
+},
+"scard": {
+"arity": 2,
+"categories": [
+"@read",
+"@set",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"script": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"script|debug": {
+"arity": 3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"script|exists": {
+"arity": -3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"script|flush": {
+"arity": -2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"script|help": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"script|kill": {
+"arity": 2,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"script|load": {
+"arity": 3,
+"categories": [
+"@slow",
+"@scripting"
+],
+"flags": [
+"noscript",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"sdiff": {
+"arity": -2,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sdiffstore": {
+"arity": -3,
+"categories": [
+"@write",
+"@set",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"select": {
+"arity": 2,
+"categories": [
+"@fast",
+"@connection"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"set": {
+"arity": -3,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update",
+"variable_flags"
+],
+"notes": "RW and ACCESS due to the optional `GET` argument"
+}
+],
+"sub": {}
+},
+"setbit": {
+"arity": 4,
+"categories": [
+"@write",
+"@bitmap",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"setex": {
+"arity": 4,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"setnx": {
+"arity": 3,
+"categories": [
+"@write",
+"@string",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"setrange": {
+"arity": 4,
+"categories": [
+"@write",
+"@string",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"shutdown": {
+"arity": -1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"loading",
+"stale",
+"no_multi",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"sinter": {
+"arity": -2,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sintercard": {
+"arity": -3,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sinterstore": {
+"arity": -3,
+"categories": [
+"@write",
+"@set",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sismember": {
+"arity": 3,
+"categories": [
+"@read",
+"@set",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"slaveof": {
+"arity": 3,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"stale",
+"no_async_loading"
+],
+"keys": [],
+"sub": {}
+},
+"slowlog": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"slowlog|get": {
+"arity": -2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"slowlog|help": {
+"arity": 2,
+"categories": [
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"slowlog|len": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"slowlog|reset": {
+"arity": 2,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+}
+}
+},
+"smembers": {
+"arity": 2,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"smismember": {
+"arity": -3,
+"categories": [
+"@read",
+"@set",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"smove": {
+"arity": 4,
+"categories": [
+"@write",
+"@set",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"sort": {
+"arity": -2,
+"categories": [
+"@write",
+"@set",
+"@sortedset",
+"@list",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+},
+{
+"begin_search": {
+"spec": {},
+"type": "unknown"
+},
+"find_keys": {
+"spec": {},
+"type": "unknown"
+},
+"flags": [
+"RO",
+"access"
+],
+"notes": "For the optional BY/GET keyword. It is marked 'unknown' because the key names derive from the content of the key we sort"
+},
+{
+"begin_search": {
+"spec": {},
+"type": "unknown"
+},
+"find_keys": {
+"spec": {},
+"type": "unknown"
+},
+"flags": [
+"OW",
+"update"
+],
+"notes": "For the optional STORE keyword. It is marked 'unknown' because the keyword can appear anywhere in the argument array"
+}
+],
+"sub": {}
+},
+"sort_ro": {
+"arity": -2,
+"categories": [
+"@read",
+"@set",
+"@sortedset",
+"@list",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+},
+{
+"begin_search": {
+"spec": {},
+"type": "unknown"
+},
+"find_keys": {
+"spec": {},
+"type": "unknown"
+},
+"flags": [
+"RO",
+"access"
+],
+"notes": "For the optional BY/GET keyword. It is marked 'unknown' because the key names derive from the content of the key we sort"
+}
+],
+"sub": {}
+},
+"spop": {
+"arity": -2,
+"categories": [
+"@write",
+"@set",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"spublish": {
+"arity": 3,
+"categories": [
+"@pubsub",
+"@fast"
+],
+"flags": [
+"pubsub",
+"loading",
+"stale",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"not_key"
+]
+}
+],
+"sub": {}
+},
+"srandmember": {
+"arity": -2,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"srem": {
+"arity": -3,
+"categories": [
+"@write",
+"@set",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"sscan": {
+"arity": -3,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"ssubscribe": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"not_key"
+]
+}
+],
+"sub": {}
+},
+"strlen": {
+"arity": 2,
+"categories": [
+"@read",
+"@string",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"subscribe": {
+"arity": -2,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"substr": {
+"arity": 4,
+"categories": [
+"@read",
+"@string",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sunion": {
+"arity": -2,
+"categories": [
+"@read",
+"@set",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sunionstore": {
+"arity": -3,
+"categories": [
+"@write",
+"@set",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"sunsubscribe": {
+"arity": -1,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"not_key"
+]
+}
+],
+"sub": {}
+},
+"swapdb": {
+"arity": 3,
+"categories": [
+"@keyspace",
+"@write",
+"@fast",
+"@dangerous"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"sync": {
+"arity": 1,
+"categories": [
+"@admin",
+"@slow",
+"@dangerous"
+],
+"flags": [
+"admin",
+"noscript",
+"no_async_loading",
+"no_multi"
+],
+"keys": [],
+"sub": {}
+},
+"time": {
+"arity": 1,
+"categories": [
+"@fast"
+],
+"flags": [
+"loading",
+"stale",
+"fast"
+],
+"keys": [],
+"sub": {}
+},
+"touch": {
+"arity": -2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"ttl": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"type": {
+"arity": 2,
+"categories": [
+"@keyspace",
+"@read",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"unlink": {
+"arity": -2,
+"categories": [
+"@keyspace",
+"@write",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RM",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"unsubscribe": {
+"arity": -1,
+"categories": [
+"@pubsub",
+"@slow"
+],
+"flags": [
+"pubsub",
+"noscript",
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"unwatch": {
+"arity": 1,
+"categories": [
+"@fast",
+"@transaction"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"allow_busy"
+],
+"keys": [],
+"sub": {}
+},
+"wait": {
+"arity": 3,
+"categories": [
+"@slow",
+"@connection"
+],
+"flags": [
+"noscript"
+],
+"keys": [],
+"sub": {}
+},
+"watch": {
+"arity": -2,
+"categories": [
+"@fast",
+"@transaction"
+],
+"flags": [
+"noscript",
+"loading",
+"stale",
+"fast",
+"allow_busy"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"xack": {
+"arity": -4,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"xadd": {
+"arity": -5,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+],
+"notes": "UPDATE instead of INSERT because of the optional trimming feature"
+}
+],
+"sub": {}
+},
+"xautoclaim": {
+"arity": -6,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"xclaim": {
+"arity": -6,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"xdel": {
+"arity": -3,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"xgroup": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"xgroup|create": {
+"arity": -5,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"xgroup|createconsumer": {
+"arity": 5,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"insert"
+]
+}
+],
+"sub": {}
+},
+"xgroup|delconsumer": {
+"arity": 5,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"xgroup|destroy": {
+"arity": 4,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"xgroup|help": {
+"arity": 2,
+"categories": [
+"@stream",
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"xgroup|setid": {
+"arity": -5,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+}
+}
+},
+"xinfo": {
+"arity": -2,
+"categories": [
+"@slow"
+],
+"flags": [],
+"keys": [],
+"sub": {
+"xinfo|consumers": {
+"arity": 4,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xinfo|groups": {
+"arity": 3,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xinfo|help": {
+"arity": 2,
+"categories": [
+"@stream",
+"@slow"
+],
+"flags": [
+"loading",
+"stale"
+],
+"keys": [],
+"sub": {}
+},
+"xinfo|stream": {
+"arity": -3,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+}
+}
+},
+"xlen": {
+"arity": 2,
+"categories": [
+"@read",
+"@stream",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"xpending": {
+"arity": -3,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xrange": {
+"arity": -4,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xread": {
+"arity": -4,
+"categories": [
+"@read",
+"@stream",
+"@slow",
+"@blocking"
+],
+"flags": [
+"readonly",
+"blocking",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"keyword": "STREAMS",
+"startfrom": 1
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 2
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xreadgroup": {
+"arity": -7,
+"categories": [
+"@write",
+"@stream",
+"@slow",
+"@blocking"
+],
+"flags": [
+"write",
+"blocking",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"keyword": "STREAMS",
+"startfrom": 4
+},
+"type": "keyword"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": -1,
+"limit": 2
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xrevrange": {
+"arity": -4,
+"categories": [
+"@read",
+"@stream",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"xsetid": {
+"arity": -3,
+"categories": [
+"@write",
+"@stream",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"xtrim": {
+"arity": -4,
+"categories": [
+"@write",
+"@stream",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zadd": {
+"arity": -4,
+"categories": [
+"@write",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"update"
+]
+}
+],
+"sub": {}
+},
+"zcard": {
+"arity": 2,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO"
+]
+}
+],
+"sub": {}
+},
+"zcount": {
+"arity": 4,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zdiff": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zdiffstore": {
+"arity": -4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zincrby": {
+"arity": 4,
+"categories": [
+"@write",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"write",
+"denyoom",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"update"
+]
+}
+],
+"sub": {}
+},
+"zinter": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zintercard": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zinterstore": {
+"arity": -4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zlexcount": {
+"arity": 4,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zmpop": {
+"arity": -4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zmscore": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zpopmax": {
+"arity": -2,
+"categories": [
+"@write",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zpopmin": {
+"arity": -2,
+"categories": [
+"@write",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"access",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zrandmember": {
+"arity": -2,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrange": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrangebylex": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrangebyscore": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrangestore": {
+"arity": -5,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrank": {
+"arity": 3,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrem": {
+"arity": -3,
+"categories": [
+"@write",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"write",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zremrangebylex": {
+"arity": 4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zremrangebyrank": {
+"arity": 4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zremrangebyscore": {
+"arity": 4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RW",
+"delete"
+]
+}
+],
+"sub": {}
+},
+"zrevrange": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrevrangebylex": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrevrangebyscore": {
+"arity": -4,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zrevrank": {
+"arity": 3,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zscan": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zscore": {
+"arity": 3,
+"categories": [
+"@read",
+"@sortedset",
+"@fast"
+],
+"flags": [
+"readonly",
+"fast"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zunion": {
+"arity": -3,
+"categories": [
+"@read",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"readonly",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+},
+"zunionstore": {
+"arity": -4,
+"categories": [
+"@write",
+"@sortedset",
+"@slow"
+],
+"flags": [
+"write",
+"denyoom",
+"movablekeys"
+],
+"keys": [
+{
+"begin_search": {
+"spec": {
+"index": 1
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"keystep": 1,
+"lastkey": 0,
+"limit": 0
+},
+"type": "range"
+},
+"flags": [
+"OW",
+"update"
+]
+},
+{
+"begin_search": {
+"spec": {
+"index": 2
+},
+"type": "index"
+},
+"find_keys": {
+"spec": {
+"firstkey": 1,
+"keynumidx": 0,
+"keystep": 1
+},
+"type": "keynum"
+},
+"flags": [
+"RO",
+"access"
+]
+}
+],
+"sub": {}
+}
+}
+}

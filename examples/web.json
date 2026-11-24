@@ -1,0 +1,12 @@
+{
+  "table": "web",
+  "version": 1,
+  "source": "example: an agent that may fetch two hosts and nothing else",
+  "doors": {
+    "fetch": {"does": "fetch a web page", "form": {"url": "string"}, "language": "url", "arg": "url"}
+  },
+  "containers": {
+    "docs.example.org": {"connect": true},
+    "api.example.org": {"connect": true}
+  }
+}

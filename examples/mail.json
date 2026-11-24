@@ -1,0 +1,22 @@
+{
+  "table": "mail",
+  "version": 1,
+  "source": "example: an agent that sends mail for a company",
+  "doors": {
+    "send_mail": {
+      "does": "send a mail",
+      "language": "mail",
+      "arg": "*",
+      "form": {"from": "string", "to": "list", "cc": "list", "bcc": "list", "subject": "string", "body": "string",
+               "attachments": "list"}
+    }
+  },
+  "empty_allowed": true,
+  "containers": {
+    "agent@example.com": {"send_as": true},
+    "example.com": {"send": true, "except": ["ceo@example.com", "payroll@example.com"]},
+    "partner.example": {"send": true},
+    "attachments": {"attach": ["pdf", "csv", "txt"]}
+  },
+  "limits": {"recipients": 5}
+}

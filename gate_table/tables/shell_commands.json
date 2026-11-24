@@ -1,0 +1,445 @@
+{
+ "about": "Known shell commands: which arguments each one reads, writes or deletes, and which options it may carry. Data, not code. A command not listed here is closed; so is a listed command with an option not listed for it.",
+ "no_paths": [
+  "echo",
+  "printf",
+  "true",
+  "pwd",
+  "date",
+  "id",
+  "whoami",
+  "which"
+ ],
+ "runs_other_code": [
+  "bash",
+  "sh",
+  "zsh",
+  "python",
+  "python3",
+  "perl",
+  "node",
+  "ruby",
+  "eval",
+  "exec",
+  "source",
+  ".",
+  "xargs",
+  "env",
+  "sudo",
+  "make",
+  "nohup",
+  "time",
+  "ssh",
+  "awk"
+ ],
+ "permissions": [
+  "chmod",
+  "chown",
+  "chgrp"
+ ],
+ "commands": {
+  "cat": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "flags": [
+    "-n",
+    "-A",
+    "-b",
+    "-s",
+    "-E",
+    "-T",
+    "-v"
+   ]
+  },
+  "head": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "value_flags": [
+    "-n",
+    "-c"
+   ],
+   "flags": [
+    "-q",
+    "-v"
+   ],
+   "count_flag": true
+  },
+  "tail": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "value_flags": [
+    "-n",
+    "-c"
+   ],
+   "flags": [
+    "-q",
+    "-v"
+   ],
+   "count_flag": true
+  },
+  "wc": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "flags": [
+    "-l",
+    "-w",
+    "-c",
+    "-m",
+    "-L"
+   ]
+  },
+  "sort": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "path_flags": {
+    "-o": "write"
+   },
+   "outputs_need_inputs": true,
+   "flags": [
+    "-r",
+    "-n",
+    "-u",
+    "-f",
+    "-h",
+    "-V",
+    "-b",
+    "-s"
+   ],
+   "value_flags": [
+    "-k",
+    "-t"
+   ]
+  },
+  "cut": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "value_flags": [
+    "-d",
+    "-f",
+    "-c",
+    "-b"
+   ],
+   "flags": [
+    "-s"
+   ]
+  },
+  "grep": {
+   "args": [
+    [
+     "first",
+     "skip"
+    ],
+    [
+     "rest",
+     "read"
+    ]
+   ],
+   "flags": [
+    "-c",
+    "-i",
+    "-n",
+    "-v",
+    "-l",
+    "-L",
+    "-E",
+    "-F",
+    "-w",
+    "-o",
+    "-h",
+    "-H",
+    "-q",
+    "-x",
+    "-s",
+    "-a"
+   ],
+   "value_flags": [
+    "-e",
+    "-m",
+    "-A",
+    "-B",
+    "-C"
+   ],
+   "path_flags": {
+    "-f": "read"
+   },
+   "flag_switch": {
+    "-r": "tree_read",
+    "-R": "tree_read"
+   },
+   "script_given_by": [
+    "-e",
+    "-f"
+   ],
+   "long_flags": {
+    "--recursive": "-r",
+    "--ignore-case": "-i",
+    "--count": "-c"
+   }
+  },
+  "diff": {
+   "args": [
+    [
+     "all",
+     "read"
+    ]
+   ],
+   "flags": [
+    "-u",
+    "-q",
+    "-b",
+    "-w",
+    "-i",
+    "-B",
+    "-y",
+    "-s"
+   ],
+   "value_flags": [
+    "-U"
+   ],
+   "flag_switch": {
+    "-r": "tree_read"
+   }
+  },
+  "stat": {
+   "args": [
+    [
+     "all",
+     "look"
+    ]
+   ],
+   "value_flags": [
+    "-c"
+   ]
+  },
+  "ls": {
+   "args": [
+    [
+     "all",
+     "list"
+    ]
+   ],
+   "no_args": "list_here",
+   "flags": [
+    "-l",
+    "-a",
+    "-A",
+    "-h",
+    "-1",
+    "-t",
+    "-S",
+    "-r",
+    "-d",
+    "-F",
+    "-i",
+    "-s",
+    "-p"
+   ],
+   "flag_switch": {
+    "-R": "tree_read"
+   },
+   "long_flags": {
+    "--all": "-a"
+   }
+  },
+  "find": {
+   "args": [
+    [
+     "all",
+     "tree_read"
+    ]
+   ],
+   "no_args": "tree_here",
+   "word_flags": true,
+   "value_flags": [
+    "-name",
+    "-iname",
+    "-type",
+    "-maxdepth",
+    "-mindepth",
+    "-size",
+    "-mtime",
+    "-mmin"
+   ],
+   "flags": [
+    "-print",
+    "-print0"
+   ],
+   "flag_switch": {
+    "-delete": "tree_delete_inside"
+   },
+   "destroys_with": {
+    "-delete": "matching"
+   }
+  },
+  "cp": {
+   "args": [
+    [
+     "init",
+     "read"
+    ],
+    [
+     "last",
+     "write"
+    ]
+   ],
+   "flag_switch": {
+    "-r": "tree_read",
+    "-R": "tree_read"
+   },
+   "needs_a_source": true,
+   "follows_links": true,
+   "flags": [
+    "-p",
+    "-f",
+    "-n",
+    "-v"
+   ],
+   "long_flags": {
+    "--recursive": "-r"
+   }
+  },
+  "mv": {
+   "args": [
+    [
+     "init",
+     "delete"
+    ],
+    [
+     "last",
+     "place"
+    ]
+   ],
+   "needs_a_source": true,
+   "flags": [
+    "-f",
+    "-n",
+    "-v"
+   ]
+  },
+  "rm": {
+   "args": [
+    [
+     "all",
+     "delete"
+    ]
+   ],
+   "flag_switch": {
+    "-r": "tree_delete",
+    "-R": "tree_delete"
+   },
+   "destroys": "files",
+   "destroys_with": {
+    "-r": "tree",
+    "-R": "tree"
+   },
+   "flags": [
+    "-f",
+    "-v"
+   ],
+   "long_flags": {
+    "--recursive": "-r",
+    "--force": "-f"
+   },
+   "refuses_dot_operands": true
+  },
+  "touch": {
+   "args": [
+    [
+     "all",
+     "write"
+    ]
+   ],
+   "flags": [
+    "-c",
+    "-a",
+    "-m"
+   ]
+  },
+  "mkdir": {
+   "args": [
+    [
+     "all",
+     "make"
+    ]
+   ],
+   "flags": [
+    "-p",
+    "-v"
+   ]
+  },
+  "rmdir": {
+   "args": [
+    [
+     "all",
+     "delete"
+    ]
+   ],
+   "destroys": "empty_dir",
+   "flags": [
+    "-v"
+   ]
+  },
+  "tee": {
+   "args": [
+    [
+     "all",
+     "write"
+    ]
+   ],
+   "flags": [
+    "-a"
+   ]
+  },
+  "sed": {
+   "args": [
+    [
+     "first",
+     "skip"
+    ],
+    [
+     "rest",
+     "read"
+    ]
+   ],
+   "flag_switch": {
+    "-i": "edit"
+   },
+   "flags": [
+    "-n",
+    "-E",
+    "-r"
+   ],
+   "value_flags": [
+    "-e"
+   ],
+   "script_given_by": [
+    "-e"
+   ],
+   "script_check": "sed"
+  }
+ }
+}
