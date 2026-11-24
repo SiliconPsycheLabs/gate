@@ -44,6 +44,8 @@ def _condition(c, where, door, table, out):
         out.append(f"{where}: \"states\" is a list with at least one state")
     if c["if"] in ("arg_max", "record_field_max") and not isinstance(c.get("max"), (int, float)):
         out.append(f"{where}: \"max\" is a number")
+    if "decoy" in c and not (isinstance(c["decoy"], str) and c["decoy"].strip()):
+        out.append(f"{where}: \"decoy\" is the text the agent reads instead of the reason, and it is not empty")
     if c["if"] == "no_planted_value" and "values" in c:
         v = c["values"]
         if not (isinstance(v, list) and v and all(isinstance(x, str) and len(x) >= 8 for x in v)):
@@ -62,6 +64,10 @@ def problems(table):
         return ["a table needs \"doors\": the functions and language doors the agent may use"]
     for i, c in enumerate(table.get("every_door", []) or []):
         _condition(c, f"every door, condition {i + 1}", None, table, out)
+    cs = table.get("containers", {})
+    for key, c in (cs.items() if isinstance(cs, dict) else enumerate(cs if isinstance(cs, list) else [])):
+        if isinstance(c, dict) and "decoy" in c and not (isinstance(c["decoy"], str) and c["decoy"].strip()):
+            out.append(f"container {key}: \"decoy\" is the text the agent reads instead of the reason, and it is not empty")
     for name, d in table["doors"].items():
         if not isinstance(d, dict):
             out.append(f"{name}: a door is an object")
@@ -69,6 +75,8 @@ def problems(table):
         form = d.get("form", {})
         if not isinstance(form, dict) or any(t not in TYPES for t in form.values()):
             out.append(f"{name}: \"form\" gives each field one of {', '.join(TYPES)}")
+        if "decoy" in d and not ("closed" in d and isinstance(d["decoy"], str) and d["decoy"].strip()):
+            out.append(f"{name}: a door's \"decoy\" answers its \"closed\": a closed door and a text that is not empty")
         ways = [k for k in ("requires", "closed", "language") if k in d]
         if len(ways) > 1:
             out.append(f"{name}: a door has one of \"requires\", \"closed\", \"language\", not {' and '.join(ways)}")

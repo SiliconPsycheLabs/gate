@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "splabs-gate"
 dynamic = ["version"]
-description = "A deterministic gate for the actions of AI agents: the rules are a table, one engine reads it, and every action passes or does not pass."
+description = "A deterministic gate for the actions of AI agents: the rules are a table, one engine reads it, and every action passes or does not pass. With the SDK that puts the hosted gate in front of an agent."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
@@ -20,12 +20,15 @@ Changelog = "https://splabs.io/changelog"
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+langchain = ["langchain-core"]
+openai-agents = ["openai-agents"]
+crewai = ["crewai"]
 
 [tool.hatch.version]
 path = "gate_table/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["gate_table"]
+packages = ["gate_table", "splabs_gate"]
 
 [tool.hatch.build.targets.sdist]
-include = ["gate_table", "examples", "tests", "docs", "README.md", "LICENSE"]
+include = ["gate_table", "splabs_gate", "examples", "tests", "docs", "README.md", "LICENSE"]

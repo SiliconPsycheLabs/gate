@@ -4,8 +4,9 @@ For each action, in this order: translate (the company's tool name and fields be
 decide (the table, the gate's own small state, and the company's system through a view), answer (pass or not, with
 the fixed reason), record (everything needed to ask the same question again later). Two outcomes, no queue.
 
-Pure: no database, no web framework. The caller keeps the gate's state between calls (it is small JSON: counters,
-switches, session values, openings) and writes the records to the log.
+Pure: no database, no web framework. The gate keeps nothing by session. The state the caller hands in is the owner's
+openings in force for these rules, kept by the caller for the table and the exact action (not for a session), and
+the caller writes the records to the log.
 
     rec, state = decide(table, {"tool": "erp.settleInvoice", "args": {"invoiceNo": "88"}}, view, state, translation)
     rec, state = ran(table, rec, view, state)                    # the company's system confirmed the action ran
@@ -14,7 +15,8 @@ switches, session values, openings) and writes the records to the log.
 
 An opening is used once. When `decide` lets an action through because of an opening, the opening is held for that
 answer (`state["held"]`): a second `decide` of the same action is answered by the table alone, `ran` spends the
-opening, and if the action does not run `release` gives it back. So the state `decide` returns is kept too.
+opening, and if the action does not run `release` gives it back. So the caller records which answer holds which
+opening (the service: the answer's `ref` on the opening's row), whichever session the answer was given in.
 
 Fail closed, always: a tool not tied to a door, a tie nobody signed, a table or a reader that cannot be read, a
 company system that does not answer, each ends in "does not pass" with its own fixed reason.
@@ -140,6 +142,7 @@ def decide(table, action, view, state=None, translation=None):
         if guard.down:
             rec.update(outcome="nopass", reason=DOWN, rule="view", opening="", opened_by="")
             rec["reads"]["down"] = guard.down
+            rec.pop("decoy", None)          # the rule did not decide: the system did not answer
     if rec["outcome"] == "pass" and rec.get("opening") == "once":    # the opening is held by this answer until ran or release
         key = _key(rec["door"], gate._last[1] if gate._last else rec["args"])
         if key in gate.one_shot:
