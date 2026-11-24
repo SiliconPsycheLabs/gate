@@ -1,0 +1,31 @@
+{
+  "table": "payments",
+  "version": 1,
+  "source": "example: a billing agent that pays invoices",
+  "state_field": "state",
+  "doors": {
+    "read_invoice": {
+      "does": "read one invoice",
+      "form": {"number": "string"},
+      "requires": [
+        {"if": "record_exists", "record": "invoice", "id": "number", "else": "invoice {id} does not exist"}
+      ]
+    },
+    "pay_invoice": {
+      "does": "pay a validated invoice of up to 5,000",
+      "form": {"number": "string"},
+      "requires": [
+        {"if": "state_in", "record": "invoice", "id": "number", "states": ["validated"],
+         "else": "invoice {id} is {state}: only a validated invoice is paid"},
+        {"if": "record_field_max", "record": "invoice", "id": "number", "field": "amount", "max": 5000,
+         "else": "invoice {id} is over 5,000: a person pays it"}
+      ],
+      "moves_to": {"record": "invoice", "id": "number", "states": ["paid"]}
+    },
+    "delete_supplier": {
+      "does": "remove a supplier from the register",
+      "form": {"id": "string"},
+      "closed": "suppliers are removed by a person, not by the agent"
+    }
+  }
+}

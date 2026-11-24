@@ -1,0 +1,122 @@
+{
+ "about": "S3 API calls and the action each one needs (from AWS's published list of S3 actions). Data, copied by hand.",
+ "operations": {
+  "GetObject": {
+   "action": "s3:GetObject",
+   "on": "object"
+  },
+  "HeadObject": {
+   "action": "s3:GetObject",
+   "on": "object"
+  },
+  "PutObject": {
+   "action": "s3:PutObject",
+   "on": "object"
+  },
+  "DeleteObject": {
+   "action": "s3:DeleteObject",
+   "on": "object"
+  },
+  "GetObjectTagging": {
+   "action": "s3:GetObjectTagging",
+   "on": "object"
+  },
+  "PutObjectTagging": {
+   "action": "s3:PutObjectTagging",
+   "on": "object"
+  },
+  "DeleteObjectTagging": {
+   "action": "s3:DeleteObjectTagging",
+   "on": "object"
+  },
+  "AbortMultipartUpload": {
+   "action": "s3:AbortMultipartUpload",
+   "on": "object"
+  },
+  "PutObjectRetention": {
+   "action": "s3:PutObjectRetention",
+   "on": "object"
+  },
+  "GetObjectRetention": {
+   "action": "s3:GetObjectRetention",
+   "on": "object"
+  },
+  "PutObjectLegalHold": {
+   "action": "s3:PutObjectLegalHold",
+   "on": "object"
+  },
+  "RestoreObject": {
+   "action": "s3:RestoreObject",
+   "on": "object"
+  },
+  "ListObjectsV2": {
+   "action": "s3:ListBucket",
+   "on": "bucket"
+  },
+  "ListObjects": {
+   "action": "s3:ListBucket",
+   "on": "bucket"
+  },
+  "HeadBucket": {
+   "action": "s3:ListBucket",
+   "on": "bucket"
+  },
+  "ListMultipartUploads": {
+   "action": "s3:ListBucketMultipartUploads",
+   "on": "bucket"
+  },
+  "CreateBucket": {
+   "action": "s3:CreateBucket",
+   "on": "bucket"
+  },
+  "DeleteBucket": {
+   "action": "s3:DeleteBucket",
+   "on": "bucket"
+  },
+  "GetBucketPolicy": {
+   "action": "s3:GetBucketPolicy",
+   "on": "bucket"
+  },
+  "PutBucketPolicy": {
+   "action": "s3:PutBucketPolicy",
+   "on": "bucket"
+  },
+  "DeleteBucketPolicy": {
+   "action": "s3:DeleteBucketPolicy",
+   "on": "bucket"
+  },
+  "GetBucketLocation": {
+   "action": "s3:GetBucketLocation",
+   "on": "bucket"
+  },
+  "GetBucketVersioning": {
+   "action": "s3:GetBucketVersioning",
+   "on": "bucket"
+  },
+  "PutBucketVersioning": {
+   "action": "s3:PutBucketVersioning",
+   "on": "bucket"
+  },
+  "PutBucketLifecycleConfiguration": {
+   "action": "s3:PutLifecycleConfiguration",
+   "on": "bucket"
+  },
+  "GetBucketLifecycleConfiguration": {
+   "action": "s3:GetLifecycleConfiguration",
+   "on": "bucket"
+  },
+  "PutBucketNotificationConfiguration": {
+   "action": "s3:PutBucketNotification",
+   "on": "bucket"
+  },
+  "ListBuckets": {
+   "action": "s3:ListAllMyBuckets",
+   "on": "account"
+  },
+  "CopyObject": {
+   "action": "s3:PutObject",
+   "on": "object",
+   "source_action": "s3:GetObject"
+  }
+ }
+}

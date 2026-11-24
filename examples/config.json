@@ -1,8 +1,0 @@
-{
-  "workspace": "/work/repo",
-  "egress_hosts": ["docs.python.org", "*.readthedocs.io"],
-  "environment": "dev",
-  "change_window": false,
-  "default_branches": ["main", "master"],
-  "git_remotes": ["github.com"]
-}

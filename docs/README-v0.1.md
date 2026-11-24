@@ -1,6 +1,6 @@
 # gate v0.1 (retired engine, archived documentation)
 
-> This is the documentation of the previous engine, v0.1.x, retired on 24 November 2026. Its hosted service and rule packs are switched off. For the gate in production, see the [README](../README.md).
+> This is the documentation of the previous engine, v0.1.x, retired on 24 November 2026. Its hosted service and rule packs are switched off, and its code is kept at the tag `v0.1.101`. For the engine in this repository now, see the [README](../README.md).
 
 A deterministic gate for the actions of AI agents.
 
