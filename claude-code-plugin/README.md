@@ -1,5 +1,10 @@
 # Gate by Silicon Psyche Labs
 
+> **Retired on 24 November 2026.** This plugin belongs to the previous engine (v0.1.x), whose service is switched off:
+> it can no longer get an answer, and in enforce mode an action it cannot check is refused. If you installed it, remove
+> it with `/plugin uninstall splabs-gate@splabs`. The gate in production is described in the
+> [README](../README.md) and the [manual](https://splabs.io/manual/gate).
+
 A deterministic gate in front of every tool call Claude Code makes. Fixed rules decide, before the call runs:
 
 - **allowed**: nothing changes, Claude Code's own permission settings apply;
