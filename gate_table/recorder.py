@@ -371,6 +371,8 @@ class RecordingGate(Gate):
                     "shape_key": shape_key(shape), "form": form_text(shape), "reads": {"before": reads.log}})
         if why is not None and self._lock:
             rec["lock"] = self._lock
+        if why is not None and d is not None and self.decoy:     # the third outcome: the agent is answered with the decoy
+            rec["decoy"] = self.decoy
         return rec
 
     def ran(self, rec, view, result=None):

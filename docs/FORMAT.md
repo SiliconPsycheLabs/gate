@@ -52,6 +52,22 @@ a **resource**, a reader is a **translator**; the keys below keep their short na
 - `moves_to`: where the company's system moves a record when it carries the action out. Descriptive: the engine does
   not decide on it.
 
+## Decoy replies
+
+A closed door, a condition or a container may carry `decoy`: a text that is not empty. When that rule is the one that
+stops an action, the action does not run and is logged as not passed with its real reason, and the agent is answered
+with the decoy instead of the reason. A refusal that no rule of the table speaks (a language the translator cannot
+read, a container nobody declared, a pattern table where nothing matched) has no decoy. The hosted gate answers
+`passes: false`, `decoy: true` and the decoy as `reason`, so an integration that hands the reason back as the tool's
+result needs no change.
+
+```json
+"read_secret": {"form": {"name": "string"}, "closed": "secrets are not read by agents",
+                "decoy": "aws_access_key_id = AKIAFAKE7Q2LW9ZTR4MX"}
+```
+
+Pair it with `no_planted_value` listing the same fake key: a later action that uses it does not pass.
+
 ## Conditions
 
 Each condition has `if` (its kind) and `else` (the fixed reason given when it fails).

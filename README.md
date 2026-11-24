@@ -2,8 +2,9 @@
 
 A deterministic gate for the actions of AI agents, from [Silicon Psyche Labs](https://splabs.io). Apache-2.0.
 
-This repository is the engine: one piece of software that reads the rules as tables and holds no rule of its own. It
-is the engine that runs the gate on [splabs.io](https://splabs.io/products/gate); every version is on the
+This repository is the engine (`gate_table`): one piece of software that reads the rules as tables and holds no rule of
+its own, the one that runs the gate on [splabs.io](https://splabs.io/products/gate). Beside it is the SDK
+(`splabs_gate`), which puts the hosted gate in front of an agent. Every version of the engine is on the
 [changelog](https://splabs.io/changelog). The table format is in [docs/FORMAT.md](docs/FORMAT.md).
 
 > **Coming from v0.1?** The previous engine (Cedar rules, the `gate` command line, the Claude Code plugin) was retired
@@ -113,6 +114,38 @@ The reply carries `ref`, `passes`, `reason`, `rule`, `opened`, `table` and `tabl
 Every decision is written to the tape, which you read, with the rules, in the console at
 [/gate/console](https://splabs.io/gate/console).
 
+## The SDK: the hosted gate in front of an agent
+
+The package `splabs_gate` carries an agent's actions to the hosted gate and its answers back; it holds no rule.
+Standard library only (each framework is imported only by its own adapter). Settings, each also a keyword of
+`Gate(...)`: `GATE_TOKEN` (a gate key), `GATE_TABLE`, `GATE_SESSION`, `GATE_AGENT`, `GATE_URL`. If the gate cannot be
+reached, the action does not pass.
+
+```python
+from splabs_gate import Gate
+
+gate = Gate(table="payments", session="task-1842", agent="billing")
+d = gate.decide("pay_invoice", {"number": "INV-0042"})
+if d.passes:
+    pay_invoice("INV-0042")
+    gate.ran(d)
+else:
+    tell_the_model(d.reason)
+```
+
+| Where your agent runs | Adapter |
+|---|---|
+| Any Python function an agent calls | `splabs_gate.guard`: the `@guard(gate)` decorator |
+| OpenAI-style function calling (the OpenAI API, vLLM, Ollama, LM Studio, llama.cpp server ...) | `splabs_gate.openai.run_tool_calls` |
+| LangChain and LangGraph tools | `splabs_gate.langchain.gate_tools` (extra `langchain`) |
+| The OpenAI Agents SDK | `splabs_gate.openai_agents.gate_agent` (extra `openai-agents`) |
+| CrewAI | `splabs_gate.crewai.gate_tools` (extra `crewai`) |
+| Any MCP client (Claude Desktop, Cursor, Windsurf, Claude Code ...) in front of a local server | `python -m splabs_gate.mcp_proxy --table T -- <server command>` |
+| An MCP client in front of a remote server (Streamable HTTP) | `python -m splabs_gate.mcp_http_proxy --table T --upstream <url>` |
+| Coding agents with hooks: Claude Code, OpenAI Codex CLI, Cursor | `python -m splabs_gate.hooks --agent claude-code --table T` |
+
+Each module's first lines show how to wire it.
+
 ## Checked against the systems' own judges
 
 For each system we wrote its maker's own rule language as a table and ran the real system beside it, as judge, on the
@@ -125,11 +158,19 @@ the gap instead of copying it.
 
 ## Claude Code
 
-A hook puts the gate in front of a Claude Code session: Claude Code runs it before every tool call, the hook decides
-the call with the same engine and a table for the session (which repositories GitHub calls may touch, which files are
-read only, which tools are closed), and each decision goes to the tape. It starts in shadow (nothing is blocked,
-everything is recorded), then enforce. It runs today on our own sessions; to put it in front of your team's sessions,
-[talk with us](https://splabs.io/products/gate/claude-code) and we write the table with you.
+The hook in `splabs_gate.hooks` puts the gate in front of a Claude Code session (and of Codex CLI and Cursor): the agent
+runs it before every tool call, the gate decides the call against the session's table (which repositories GitHub calls
+may touch, which files are read only, which tools are closed), and each decision goes to the tape. In
+`.claude/settings.json`:
+
+```json
+{"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command",
+  "command": "python -m splabs_gate.hooks --agent claude-code --table coding_agent"}]}]}}
+```
+
+`GATE_HOOK_MODE=shadow` (the default) records every decision and lets the call run; `enforce` refuses a call that does
+not pass, and any call the gate could not decide. Start in shadow, read the tape, then enforce. To write the table for
+your team's sessions with us, [talk with us](https://splabs.io/products/gate/claude-code).
 
 ## License
 

@@ -116,6 +116,9 @@ class Gate:
         self._bound = (None, None)
         self._cel_ctx = (None, None)
         self._lock = None           # the lock of the rule that stopped the last action
+        self._stopper = None        # the door, condition or container that stopped the last action
+        self._decoy = None          # its decoy reply, when it has one
+        self._at = None
         self._rows_now = (None, {})
 
     # ---- openings, by the owner only -------------------------------------------------------------------
@@ -170,6 +173,19 @@ class Gate:
 
     # ---- the decision ----------------------------------------------------------------------------------
     def decide(self, door, args, view):
+        """None: the action passes; a string: it does not, with the fixed reason. When the rule that stopped it carries
+        a `decoy`, `self.decoy` is that text: the action still does not run and the reason is logged, but the agent is
+        answered with the decoy."""
+        self._stopper = None
+        why = self._decide(door, args, view)
+        self._decoy = (self._stopper or {}).get("decoy") if why is not None else None
+        return why
+
+    @property
+    def decoy(self):
+        return self._decoy
+
+    def _decide(self, door, args, view):
         d = self.doors.get(door)
         if d is None:
             return "this function is not in the menu"
@@ -178,6 +194,7 @@ class Gate:
         if json.dumps([door, args], sort_keys=True) in self.one_shot:
             return None
         if "closed" in d and door not in self.task_open:
+            self._stopper = d
             return d["closed"]
         # Planted values first, before any language is read: a call that carries one stops here, so the log names
         # this condition and not whatever a reader would have said about the same text.
@@ -185,6 +202,7 @@ class Gate:
             if c.get("if") == "no_planted_value":
                 why = self.check(c, door, args, view)
                 if why:
+                    self._stopper = c
                     return why
         # A language door: every atomic operation of the text must be allowed. `languages` lists several texts of one
         # call, each with the path of its field (`arguments.command`: a field inside a tool's arguments); a field the
@@ -221,6 +239,7 @@ class Gate:
                 continue
             why = self.check(c, door, args, view)
             if why:
+                self._stopper = c
                 return why
         return None
 
@@ -229,7 +248,15 @@ class Gate:
         return list(self.t.get("every_door", [])) * (door not in self.t.get("every_door_except", []))
 
     def allowed(self, op, view=None, language=None, counted=None):
-        """One atomic operation against the containers of the table: (operation, container, part)."""
+        """One atomic operation against the containers of the table: (operation, container, part). On a refusal, the
+        container that refused (when there is one) is noted as what stopped the action."""
+        self._at = None
+        why = self._allowed(op, view, language, counted)
+        if why:
+            self._stopper = self._at
+        return why
+
+    def _allowed(self, op, view=None, language=None, counted=None):
         kind, name, part = op
         if kind == "statements":            # how many statements the text holds
             return "one change per text" if self.t.get("one_statement") and name > 1 and part else None
@@ -264,6 +291,7 @@ class Gate:
         if c is None:
             return f"{name} is not a declared container"
         self._lock = c.get("lock")
+        self._at = c
         if kind == "destroy_dirs":
             return None if c.get("destroy_dirs", True) else f"no directory of {name} is deleted"
         if kind == "rows":                  # which rows a statement touches, against the container's row conditions
@@ -334,6 +362,7 @@ class Gate:
                     continue
                 if c.get("deny"):
                     self._lock = c.get("lock")
+                    self._at = c
                     return f"{kind} is denied on {name}"
                 allowed = True
             self._lock = self.t.get("action_locks", {}).get(kind)
@@ -345,6 +374,7 @@ class Gate:
                 if match(c["match"], name):
                     verdict = f"{kind} is denied on {name}" if c.get("deny") else None
                     self._lock = c.get("lock")
+                    self._at = c
             if verdict is not None and self._lock is None:
                 self._lock = self.t.get("default_lock")
             return verdict
@@ -353,11 +383,13 @@ class Gate:
                 if not match(c["match"], name):
                     continue
                 self._lock = c.get("lock")
+                self._at = c
                 if c.get("deny"):
                     return f"{kind} is denied on {name}"
                 if c.get(kind):
                     return None
             self._lock = None
+            self._at = None                 # closed because nothing spoke: no container's decoy applies
             return f"{kind} is closed on {name}"
         need = [] if kind == "any" else kind.split("+")     # one container must give every right the operation needs
         for pattern, c in self.t.get("containers", {}).items():
