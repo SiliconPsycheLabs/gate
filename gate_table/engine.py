@@ -177,6 +177,7 @@ class Gate:
         a `decoy`, `self.decoy` is that text: the action still does not run and the reason is logged, but the agent is
         answered with the decoy."""
         self._stopper = None
+        self._stop_op = None
         why = self._decide(door, args, view)
         self._decoy = (self._stopper or {}).get("decoy") if why is not None else None
         return why
@@ -190,6 +191,7 @@ class Gate:
         if d is None:
             return "this function is not in the menu"
         self._lock = d.get("lock")
+        self._stop_op = None                # the operation whose refusal decided, None when a condition decided
         self._rows_now = (None, {})
         if json.dumps([door, args], sort_keys=True) in self.one_shot:
             return None
@@ -209,27 +211,39 @@ class Gate:
         # call does not carry is not read. `schemas`, when the table has it, gives each language its own schema.
         langs = d.get("languages") or ([{"language": d["language"], "arg": d["arg"]}] if "language" in d else [])
         counted = {}
+        # A refusal that carries a lock (a person may open the action once) does not end the reading: every other rule is
+        # still read, and a refusal that carries no lock wins (2026-11-25). Otherwise an action stopped by a rule
+        # nobody opens (a target outside the scope, a closed script) could be opened through another rule's lock.
+        held = None
         for spec in langs:
             lang, text = spec["language"], _field(args, spec["arg"])
             if text is _ABSENT:
                 continue
             if lang not in self.readers:
+                self._lock, self._stop_op = None, None
                 return f"no reader for {lang}: the action does not pass"
             if self.t.get("compile_check") and view is not None and not view.compiles(lang, text):
+                self._lock, self._stop_op = None, None
                 return "statement not understood: the system itself does not take it"
             schema = self.t.get("schemas", {}).get(lang, self.t.get("schema", {}))
             if self.t.get("live_schema") and view is not None:      # the names that exist now, read from the system itself
                 schema = {**schema, **view.schema(lang), "live": True}
             try:
                 ops = self.readers[lang](text, schema)
-            except ValueError as e:
+            except ValueError as e:                 # a text that is not read carries no lock, whatever was held before:
+                self._lock, self._stop_op = None, None      # nobody opens an action whose text the gate cannot read
                 return f"statement not understood: {e}"
             except (TypeError, AttributeError):     # a value the reader cannot read as its language: it does not pass
+                self._lock, self._stop_op = None, None
                 return f"statement not understood: the {lang} text is not text"
             for op in sorted(ops, key=str):
                 why = self.allowed(op, view, lang, counted)
                 if why:
-                    return why
+                    if self._lock is None:
+                        self._stop_op = op
+                        return why
+                    if held is None:
+                        held = (why, self._lock, self._stopper, op)
         if langs:
             self._rows_now = (json.dumps([door, args], sort_keys=True), counted)
         self._bound = (None, None)
@@ -240,7 +254,16 @@ class Gate:
             why = self.check(c, door, args, view)
             if why:
                 self._stopper = c
-                return why
+                if "lock" in c:                     # a condition may carry its own lock
+                    self._lock = c["lock"]
+                if self._lock is None:
+                    self._stop_op = None
+                    return why
+                if held is None:
+                    held = (why, self._lock, c, None)
+        if held is not None:
+            why, self._lock, self._stopper, self._stop_op = held
+            return why
         return None
 
     def _every(self, door):

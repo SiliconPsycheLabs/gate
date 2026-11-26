@@ -6,7 +6,8 @@ result with `isError: true` and the gate's reason; the server never sees it.
     python -m splabs_gate.mcp_http_proxy --table T --upstream https://mcp.example.com/mcp [--port 8765] [--agent A]
 
 The session of the gate is the MCP session (`Mcp-Session-Id`), so each client conversation is one session on the tape.
-Answers the server streams (`text/event-stream`) are passed through as they come. Standard library only.
+Answers the server streams (`text/event-stream`) are passed through as they come; the answer to a passed call
+confirms it to the gate (`ran`), or gives it back (`release`) when it is an error or never comes. Standard library only.
 """
 from __future__ import annotations
 
@@ -20,6 +21,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .client import Gate
 
 HOP = {"host", "content-length", "connection", "transfer-encoding", "keep-alive", "accept-encoding"}
+
+
+def _seen(on_message, raw: bytes) -> None:
+    try:
+        on_message(json.loads(raw))
+    except ValueError:
+        pass
 
 
 def make_handler(upstream: str, table: str, agent: str, gate_factory=None):
@@ -36,7 +44,7 @@ def make_handler(upstream: str, table: str, agent: str, gate_factory=None):
         def log_message(self, *a):
             pass
 
-        def _forward(self, method: str, body: bytes | None):
+        def _forward(self, method: str, body: bytes | None, on_message=None):
             headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP}
             req = urllib.request.Request(upstream, data=body, method=method, headers=headers)
             try:
@@ -55,11 +63,15 @@ def make_handler(upstream: str, table: str, agent: str, gate_factory=None):
                     chunk = r.readline()
                     if not chunk:
                         break
+                    if on_message and chunk.startswith(b"data:"):
+                        _seen(on_message, chunk[5:])
                     self.wfile.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n")
                     self.wfile.flush()
                 self.wfile.write(b"0\r\n\r\n")
             else:
                 data = r.read()
+                if on_message:
+                    _seen(on_message, data)
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -82,9 +94,23 @@ def make_handler(upstream: str, table: str, agent: str, gate_factory=None):
             if isinstance(msg, dict) and msg.get("method") == "tools/call" and "id" in msg:
                 p = msg.get("params") or {}
                 session = self.headers.get("Mcp-Session-Id") or "mcp-http"
-                d = gate_for(session).decide(str(p.get("name", "")), {"arguments": p.get("arguments") or {}})
+                gate = gate_for(session)
+                d = gate.decide(str(p.get("name", "")), {"arguments": p.get("arguments") or {}})
                 if not d.passes:
                     return self._refuse(msg["id"], d.message())
+                settled = []
+
+                def answer(m):                    # the server's answer to this call: confirm it ran, or give it back
+                    if isinstance(m, dict) and m.get("id") == msg["id"] and not settled:
+                        settled.append(1)
+                        failed = "error" in m or bool((m.get("result") or {}).get("isError"))
+                        gate.release(d) if failed else gate.ran(d)
+                try:
+                    self._forward("POST", body, answer)
+                finally:
+                    if not settled:               # no answer came back for it: it did not run as far as we know
+                        gate.release(d)
+                return
             self._forward("POST", body)
 
         def do_GET(self):

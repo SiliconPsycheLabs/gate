@@ -14,7 +14,8 @@ Adapters: `splabs_gate.mcp_proxy` (any MCP client: Claude Desktop, Cursor, Winds
 (function calling of OpenAI and of every server that speaks its API: vLLM, Ollama, ...), `splabs_gate.guard` (a
 decorator for any Python function an agent calls), `splabs_gate.langchain` (LangChain and LangGraph tools),
 `splabs_gate.openai_agents` (the OpenAI Agents SDK), `splabs_gate.crewai` (CrewAI). Each framework is imported only
-by its own adapter.
+by its own adapter. For the company's side, `splabs_gate.sender` sends an action with the objects it is about
+(`POST /manager/action`) and keeps actions on the same record in order.
 """
 from .client import Decision, Gate, GateUnreachable  # noqa: F401
 from . import openai as openai_tools  # noqa: E402,F401  function calling (OpenAI, vLLM, Ollama ...)

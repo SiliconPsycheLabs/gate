@@ -51,11 +51,29 @@ def _condition(c, where, door, table, out):
         if not (isinstance(v, list) and v and all(isinstance(x, str) and len(x) >= 8 for x in v)):
             out.append(f"{where}: \"values\" is a list of planted values, each a text of at least 8 characters")
     if c["if"] == "expr" and isinstance(c.get("expr"), str):
+        why = _read(c["expr"])
+        if why:
+            out.append(f"{where}: the expression is not read: {why}")
+
+
+_READ = {}          # expression text -> "" when it is read, else the first line of the error
+_READ_MAX = 20000
+
+
+def _read(expr):
+    """Whether the expression language reads `expr`. A table compiled from a vendor's document repeats the same
+    expression on many doors (Cloudflare: 30,646 written, 3,778 distinct), so each text is read once."""
+    if expr not in _READ:
         try:
             import celpy
-            celpy.Environment().compile(c["expr"])
+            celpy.Environment().compile(expr)
+            why = ""
         except Exception as e:  # noqa: BLE001
-            out.append(f"{where}: the expression is not read: {str(e).splitlines()[0][:160]}")
+            why = str(e).splitlines()[0][:160]
+        if len(_READ) >= _READ_MAX:
+            _READ.clear()
+        _READ[expr] = why
+    return _READ[expr]
 
 
 def problems(table):
@@ -99,9 +117,74 @@ def problems(table):
         if table.get(block):
             out.append(f"{block}: the gate keeps no {block[:-1] if block == 'counters' else 'switch'}. A count or a state a rule reads is a field of "
                        "the company's object, read with a condition on that record")
+    given = table.get("given_states", {})
+    if not isinstance(given, dict) or any(not isinstance(v, list) or not all(isinstance(x, str) for x in v) for v in given.values()):
+        out.append("given_states: for each kind of record, the list of states the company itself sets")
+    else:
+        out.extend(_circles(table))
     containers = table.get("containers")
     for name, c in (containers.items() if isinstance(containers, dict) else []):
         gone = sorted(k for k in c if k.endswith("_session")) if isinstance(c, dict) else []
         if gone:
             out.append(f"container {name}: {', '.join(gone)}: nothing is summed over a session; a limit is stated per statement (`_max`)")
+    return out
+
+
+def _needs(table, d):
+    """The states a door needs before it can pass: (kind of record, states), from its state conditions and from the
+    conditions every door carries."""
+    out = []
+    for c in list(table.get("every_door", []) or []) + list(d.get("requires", []) or []):
+        if not isinstance(c, dict) or not isinstance(c.get("states"), list):
+            continue
+        if c.get("if") == "state_in" and c.get("record"):
+            out.append((str(c["record"]), tuple(c["states"])))
+        elif c.get("if") == "linked_state_in" and c.get("linked"):
+            out.append((str(c["linked"]), tuple(c["states"])))
+    return out
+
+
+def never_pass(table):
+    """Doors that can never pass because they wait for each other: each needs a state of a record that only another
+    door of the same circle brings about (pay an invoice only when its order is shipped, ship the order only when its
+    invoice is paid). A needed state is there to start with when no door moves records of its kind, when no door
+    brings a record to it (the company sets it), or when the table names it in "given_states"; otherwise it is there
+    once a door that can pass brings a record to it. A closed door opens only by a person and is left out."""
+    doors = {n: d for n, d in table.get("doors", {}).items() if isinstance(d, dict) and "closed" not in d}
+    made = {}                                            # (kind, state) -> the doors that bring a record to it
+    for n, d in doors.items():
+        m = d.get("moves_to")
+        if isinstance(m, dict) and m.get("record"):
+            for st in m.get("states") or []:
+                made.setdefault((str(m["record"]), st), []).append(n)
+    moved = {k for k, _ in made}
+    given = {(str(k), s) for k, v in (table.get("given_states") or {}).items() for s in v}
+
+    def there(kind, states, live):
+        if kind not in moved:
+            return True
+        return any((kind, s) in given or (kind, s) not in made or any(p in live for p in made[(kind, s)]) for s in states)
+    needs = {n: [(k, ss) for k, ss in _needs(table, d) if k in moved] for n, d in doors.items()}   # read once
+    live = {n for n, ns in needs.items() if not ns}
+    waiting, grew = [n for n, ns in needs.items() if ns], True
+    while grew and waiting:
+        grew, still = False, []
+        for n in waiting:
+            if all(there(k, ss, live) for k, ss in needs[n]):
+                live.add(n)
+                grew = True
+            else:
+                still.append(n)
+        waiting = still
+    return {n: [(k, ss, sorted({p for s in ss for p in made.get((k, s), [])})) for k, ss in needs[n] if not there(k, ss, live)]
+            for n in waiting}
+
+
+def _circles(table):
+    stuck = never_pass(table)
+    out = []
+    for n, waits in sorted(stuck.items()):
+        why = "; ".join(f"{k} in {' or '.join(ss)}, which only {', '.join(by)} brings about" for k, ss, by in waits)
+        out.append(f"{n}: it can never pass, it waits in a circle: it needs {why}. Break the circle, or name in "
+                   "\"given_states\" the state the company itself sets")
     return out

@@ -138,7 +138,12 @@ def test_http_proxy_decides_tool_calls_and_forwards_the_rest():
     up = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
     threading.Thread(target=up.serve_forever, daemon=True).start()
 
+    settled = []
+
     def transport(path, body):
+        if not path.endswith("/decide"):
+            settled.append(path.rsplit("/", 1)[1])
+            return 200, {"ok": True}
         ok = body["tool"] != "get-env"
         return 200, {"passes": ok, "reason": "" if ok else "closed", "rule": "get-env:closed" * (not ok), "ref": "r"}
     factory = lambda s: Gate(table="t", session=s, transport=transport)          # noqa: E731
@@ -155,4 +160,5 @@ def test_http_proxy_decides_tool_calls_and_forwards_the_rest():
     r = post({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "get-env", "arguments": {}}})
     assert r["result"]["isError"] and "closed" in r["result"]["content"][0]["text"]
     assert seen == ["initialize", "echo"]                       # the refused call never reached the server
+    assert settled == ["ran"]                                   # the passed call was confirmed by its answer
     up.shutdown(); px.shutdown()
