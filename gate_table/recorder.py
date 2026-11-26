@@ -187,6 +187,8 @@ class SentView(RecordedView):
             for k in (_k(key), str(key)):
                 if k in got:
                     return got[k]
+        if key is None:                     # a record named by no key is no record: nothing a sender could be asked for
+            return None                     # (the record that would name it was not sent either, and that one is asked)
         return self._ask(["record", kind, key], f"record {kind} {key}", None)
 
     def all(self, kind):
@@ -306,16 +308,19 @@ class RecordingGate(Gate):
             return d.get("rule") or f"{door}:closed"
         if self._unread:
             return f"{door}:reader"
-        if self._failed_op is not None:
-            kind, name, _part = self._failed_op
+        failed = getattr(self, "_stop_op", self._failed_op)   # the engine names the refusal that decided
+        if failed is not None:
+            kind, name, _part = failed
             cs = self.t.get("containers", {})
             if isinstance(cs, dict) and isinstance(cs.get(name), dict) and cs[name].get("rule"):
                 return cs[name]["rule"]
             if self.t.get("container_match"):
                 name = _pattern_of(self.t, kind, name, self.matchers)
             return f"{door}:{kind}" + ("" if kind in ("statements", "commands") else f":{name}")
-        if self._trace and self._trace[-1][1]:
-            c = self._trace[-1][0]
+        stopper = getattr(self, "_stopper", None)
+        decided = stopper if any(stopper is c for c, _ in self._trace) else (self._trace[-1][0] if self._trace and self._trace[-1][1] else None)
+        if decided is not None:
+            c = decided
             if c.get("rule"):
                 return c["rule"]
             for where, conds in ((door, d.get("requires", [])), ("every_door", self.t.get("every_door", []))):
